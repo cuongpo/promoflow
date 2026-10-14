@@ -1,0 +1,13 @@
+{
+  "name": "promoflow-studio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "start": "NODE_ENV=production node dev-server.mjs"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^153.0.0",
+    "playwright-core": "^1.64.0"
+  }
+}

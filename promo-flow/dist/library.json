@@ -1,0 +1,409 @@
+{
+  "scannedAt": "2026-10-14T08:35:13.632Z",
+  "model": "gemini-3.8-flash",
+  "shorts": [
+    {
+      "videoId": "zH_WqhnnYUg",
+      "url": "https://www.youtube.com/shorts/zH_WqhnnYUg",
+      "domain": "Productivity",
+      "title": "This hack makes managing Notion tasks on your phone easier. #notion #productivity #productivitytips",
+      "channel": "Easlo",
+      "subscribers": 111000,
+      "views": 2761270,
+      "likes": 29043,
+      "comments": 571,
+      "seconds": 15,
+      "publishedAt": "2025-02-18",
+      "thumbnail": "library/zH_WqhnnYUg.jpg",
+      "product": "SyncTasks",
+      "productType": "Notion task widget app",
+      "audience": "Notion users and aesthetic productivity enthusiasts",
+      "summary": "The creator contrasts clunky task management inside mobile Notion with a sleek home screen widget that syncs directly, ending on the app download page.",
+      "whyItWorks": [
+        "Beginners vs pros hook instantly targets power users looking for optimization",
+        "Clearly demonstrates the real friction of using complex apps on mobile",
+        "Satisfying beat drop pairs perfectly with a minimal, seamless widget reveal"
+      ],
+      "bestFor": "Companion widgets, shortcuts, and utilities that simplify popular complex productivity software.",
+      "needs": [
+        "Aesthetic desk setup with a phone held in hand",
+        "Screen showing friction in the parent tool versus sleek widget alternative",
+        "App Store download page ready on device"
+      ],
+      "requires": [
+        "voiceover",
+        "real-world footage"
+      ],
+      "format": {
+        "source": "gemini",
+        "videoId": "zH_WqhnnYUg",
+        "title": "Beginner vs Pro Mobile Workflow Upgrade",
+        "summary": "Beginners vs Pros hook → Slow native workflow struggle → 'What if' pivot → Clean home screen widget payoff → App Store reveal",
+        "hookFormula": "[Tool] beginners vs pros (Part [X]) followed by clunky default workflow vs effortless shortcut",
+        "tone": "whatif",
+        "beats": [
+          {
+            "kind": "hook",
+            "seconds": 3,
+            "caption": "Notion beginners vs pros (Part 6)",
+            "note": "Aesthetic phone setup unlock transitioning to native app"
+          },
+          {
+            "kind": "step",
+            "seconds": 5,
+            "caption": "Managing my tasks in Notion 🤮🤮🤮",
+            "note": "Demonstrating the tedious multi-tap native task update process"
+          },
+          {
+            "kind": "payoff",
+            "seconds": 4,
+            "caption": "Managing my tasks from Notion 🥱🥱🥱",
+            "note": "Beat drops as tasks are checked off instantly via a clean home screen widget"
+          },
+          {
+            "kind": "cta",
+            "seconds": 2,
+            "caption": "SyncTasks",
+            "note": "Revealing the iOS App Store listing for the featured tool"
+          }
+        ],
+        "captionColors": {
+          "hook": "white",
+          "steps": "white"
+        },
+        "cta": {
+          "placement": "endcard",
+          "example": "SyncTasks (App Store page)"
+        },
+        "model": "gemini-3.8-flash"
+      }
+    },
+    {
+      "videoId": "NZBJvtSbFww",
+      "url": "https://www.youtube.com/shorts/NZBJvtSbFww",
+      "domain": "Health & Fitness",
+      "title": "I Tried the Best AI Calorie Tracking App",
+      "channel": "Thomas McGee",
+      "subscribers": 6130,
+      "views": 1509938,
+      "likes": 9225,
+      "comments": 404,
+      "seconds": 9,
+      "publishedAt": "2024-08-24",
+      "thumbnail": "library/NZBJvtSbFww.jpg",
+      "product": "AI Meal Tracker",
+      "productType": "AI calorie tracker",
+      "audience": "Fitness enthusiasts, gym-goers, and people tracking macros",
+      "summary": "A creator snaps a photo of his meal to show how the app instantly identifies ingredients and calculates calories and macros.",
+      "whyItWorks": [
+        "Instant visual proof showing the app correctly breaks down multi-item meals.",
+        "Aspirational text hook ('Stay Lean & Strong') targets high-intent fitness users.",
+        "Quick physical demo shows logging meals is effortless compared to manual entry."
+      ],
+      "bestFor": "Apps that use computer vision or AI scanning to replace tedious manual data entry.",
+      "needs": [
+        "A plated meal with distinct visible ingredients",
+        "A smartphone loaded with the working AI scan feature",
+        "Engaging background audio and a clear text hook"
+      ],
+      "requires": [
+        "face on camera",
+        "real-world footage",
+        "graphics"
+      ],
+      "format": {
+        "source": "gemini",
+        "videoId": "NZBJvtSbFww",
+        "title": "Photo-to-Tracking Routine Demo",
+        "summary": "Routine hook → photo capture proof → auto-breakdown step → daily dashboard payoff",
+        "hookFormula": "How I [Do Desirable Routine] to [Achieve Desirable Result]",
+        "tone": "pov",
+        "beats": [
+          {
+            "kind": "hook",
+            "seconds": 3.5,
+            "caption": "How I Track my Meals to Stay Lean & Strong",
+            "note": "Presenter sits with a prepared meal, takes a photo with their phone, and flashes the screen to camera"
+          },
+          {
+            "kind": "step",
+            "seconds": 2.5,
+            "caption": "",
+            "note": "Close-up on app screen showing instant AI line-item breakdown of ingredients, calories, and macros"
+          },
+          {
+            "kind": "payoff",
+            "seconds": 3.5,
+            "caption": "",
+            "note": "User scrolls through daily macro progress rings and chronological photo meal log"
+          }
+        ],
+        "captionColors": {
+          "hook": "white",
+          "steps": "white"
+        },
+        "cta": {
+          "placement": "caption",
+          "example": "Track your nutrition automatically with link in bio"
+        },
+        "model": "gemini-3.8-flash"
+      }
+    },
+    {
+      "videoId": "3YWrLksIaAY",
+      "url": "https://www.youtube.com/shorts/3YWrLksIaAY",
+      "domain": "Education",
+      "title": "Improve Your Vocabulary in 30 Days! 📖 Try Now and Enjoy Everyday Progress ⚡️",
+      "channel": "Promova",
+      "subscribers": 197000,
+      "views": 832632,
+      "likes": 5282,
+      "comments": 14,
+      "seconds": 13,
+      "publishedAt": "2021-12-23",
+      "thumbnail": "library/3YWrLksIaAY.jpg",
+      "product": "Promova",
+      "productType": "Language learning app",
+      "audience": "ESL learners wanting to expand specific vocabulary",
+      "summary": "The video pairs rhythmic beat drops with illustrated examples and pronunciations of similar action verbs like squeeze, squash, and crumple.",
+      "whyItWorks": [
+        "Rhythmic beat-matched audio makes vocabulary repetition engaging and memorable",
+        "Clear visual illustrations clarify subtle nuances between similar physical action verbs",
+        "Bite-sized format delivers instant educational payoff without feeling like a boring lesson"
+      ],
+      "bestFor": "Apps teaching vocabulary, specialized terminology, or visual concepts that benefit from quick side-by-side comparisons.",
+      "needs": [
+        "Set of 6 clear illustrations demonstrating related actions or terms",
+        "Upbeat rhythmic audio track synced with clear pronunciation voiceover",
+        "Intro hook graphic promising measurable learning progress"
+      ],
+      "requires": [
+        "voiceover",
+        "graphics"
+      ],
+      "format": {
+        "source": "gemini",
+        "videoId": "3YWrLksIaAY",
+        "title": "Visual Vocabulary Grid Flashcard",
+        "summary": "Roadmap level teaser hook → 6-part visual vocabulary grid with rhythmic pronunciation beats",
+        "hookFormula": "Gamified level-select teaser promising fast skill mastery in 30 days",
+        "tone": "whatif",
+        "beats": [
+          {
+            "kind": "hook",
+            "seconds": 2,
+            "caption": "Improve your English in 30 days",
+            "note": "Gamified curriculum level selector menu being tapped"
+          },
+          {
+            "kind": "step",
+            "seconds": 2,
+            "caption": "squeeze",
+            "note": "Static illustration of hand squeezing an orange, labeled squeeze"
+          },
+          {
+            "kind": "step",
+            "seconds": 2,
+            "caption": "squash",
+            "note": "Static illustration of pie hitting face, labeled squash"
+          },
+          {
+            "kind": "step",
+            "seconds": 2,
+            "caption": "crumple",
+            "note": "Static illustration of hands crumpling paper, labeled crumple"
+          },
+          {
+            "kind": "step",
+            "seconds": 2,
+            "caption": "press",
+            "note": "Static illustration of finger pressing a red buzzer button, labeled press"
+          },
+          {
+            "kind": "step",
+            "seconds": 3,
+            "caption": "wring",
+            "note": "Static illustration of hands wringing wet cloth, labeled wring"
+          }
+        ],
+        "captionColors": {
+          "hook": "yellow",
+          "steps": "white"
+        },
+        "cta": {
+          "placement": "caption",
+          "example": "Download the app on App Store or Google Play"
+        },
+        "model": "gemini-3.8-flash"
+      }
+    },
+    {
+      "videoId": "Pqx14nRu-NA",
+      "url": "https://www.youtube.com/shorts/Pqx14nRu-NA",
+      "domain": "Fintech",
+      "title": "3 Benefits to Using Revolut #Shorts",
+      "channel": "Technically Money",
+      "subscribers": 35900,
+      "views": 357821,
+      "likes": 4999,
+      "comments": 47,
+      "seconds": 17,
+      "publishedAt": "2022-05-03",
+      "thumbnail": "library/Pqx14nRu-NA.jpg",
+      "product": "Revolut",
+      "productType": "fintech & digital banking app",
+      "audience": "everyday banking users and frequent travelers",
+      "summary": "A presenter rapidly pitches the top benefits of a free Revolut account accompanied by clean app screen mockups.",
+      "whyItWorks": [
+        "Clear numerical hook sets quick expectations and encourages viewers to stay until the end.",
+        "Prominent smartphone screen mockups display actual UI to build visual trust.",
+        "Concise listicle structure highlights high-value perks without unnecessary fluff."
+      ],
+      "bestFor": "Consumer apps with distinct, high-impact features that can be quickly summarized into bite-sized perks.",
+      "needs": [
+        "Talking head video shot with crisp lighting and engaging body language",
+        "Screen recordings of key app features framed in mobile phone mockups",
+        "Bold kinetic subtitles and visual graphics"
+      ],
+      "requires": [
+        "face on camera",
+        "voiceover",
+        "screen recording",
+        "graphics"
+      ],
+      "format": {
+        "source": "gemini",
+        "videoId": "Pqx14nRu-NA",
+        "title": "3 Advantages Listicle with App UI Showcase",
+        "summary": "Hand-sign hook → multi-currency graphic → phone screen salary feature → phone screen travel cashback → comedic count turn",
+        "hookFormula": "Presenter holds up fingers stating 'X advantages to using [Product / Free Tier]'",
+        "tone": "pov",
+        "beats": [
+          {
+            "kind": "hook",
+            "seconds": 3,
+            "caption": "3 advantages to using the Revolut free account.",
+            "note": "Presenter on camera holding up three fingers directly addressing the audience"
+          },
+          {
+            "kind": "step",
+            "seconds": 3,
+            "caption": "With Revolut you can hold & send over 30 different currencies.",
+            "note": "Motion graphic showing product card and grid of currency codes"
+          },
+          {
+            "kind": "step",
+            "seconds": 4,
+            "caption": "They also have a salary feature that enables you to get paid a day early.",
+            "note": "Presenter holding phone mockup showing the in-app early salary feature screen"
+          },
+          {
+            "kind": "step",
+            "seconds": 5,
+            "caption": "And if you book accommodation through Revolut Stays, you could earn 10% cashback.",
+            "note": "Phone mockup walkthrough searching and booking hotels in the app"
+          },
+          {
+            "kind": "payoff",
+            "seconds": 2,
+            "caption": "Was that 4 advantages or...",
+            "note": "Presenter returns to camera with a playful hesitation/humorous abrupt cutoff"
+          }
+        ],
+        "captionColors": {
+          "hook": "white",
+          "steps": "white"
+        },
+        "cta": {
+          "placement": "caption",
+          "example": "Check the link in bio to open your free account"
+        },
+        "model": "gemini-3.8-flash"
+      }
+    },
+    {
+      "videoId": "nAZD57mN78I",
+      "url": "https://www.youtube.com/shorts/nAZD57mN78I",
+      "domain": "Marketing SaaS",
+      "title": "Create & launch LinkedIn Ads without leaving Canva",
+      "channel": "Canva",
+      "subscribers": 917000,
+      "views": 171050,
+      "likes": 476,
+      "comments": 2,
+      "seconds": 43,
+      "publishedAt": "2026-09-23",
+      "thumbnail": "library/nAZD57mN78I.jpg",
+      "product": "Canva Grow",
+      "productType": "Marketing SaaS",
+      "audience": "digital marketers and small business owners",
+      "summary": "A presenter demonstrates how to create, launch, and track LinkedIn ad performance directly inside Canva using Canva Grow.",
+      "whyItWorks": [
+        "Direct problem-solution hook addresses ad management pain points immediately",
+        "Step-by-step screencast walkthrough removes setup friction and proves workflow ease",
+        "Smooth transition from creation to analytics showcases complete value loop"
+      ],
+      "bestFor": "SaaS tools with multi-step workflows or platform integrations launching new features.",
+      "needs": [
+        "Talking-head video footage with clean audio",
+        "Screen recordings of the product setup and analytics dashboard",
+        "Pop-up callout graphics and timed captions"
+      ],
+      "requires": [
+        "face on camera",
+        "voiceover",
+        "screen recording",
+        "graphics"
+      ],
+      "format": {
+        "source": "gemini",
+        "videoId": "nAZD57mN78I",
+        "title": "What If All-In-One Workflow Showcase",
+        "summary": "What if hook → Step-by-step feature walkthrough → Presenter turn addressing doubt → Analytics payoff → Final CTA",
+        "hookFormula": "What if you could [action 1], [action 2], and [action 3] all within [platform/tool]?",
+        "tone": "whatif",
+        "beats": [
+          {
+            "kind": "hook",
+            "seconds": 5,
+            "caption": "What if you could create your LinkedIn ad, launch your campaign, and see what's working…",
+            "note": "Presenter on camera speaking directly to viewer with animated chat bubble captions"
+          },
+          {
+            "kind": "step",
+            "seconds": 8,
+            "caption": "With Canva Grow you can start with a design... connect your account, set up your…",
+            "note": "Fast-paced screencast showing each step of setting up and launching the ad directly inside the tool"
+          },
+          {
+            "kind": "turn",
+            "seconds": 5,
+            "caption": "But nobody wants to throw money at an ad, cross your fingers and just hope for the best",
+            "note": "Cut back to presenter gesturing on camera to address user fear or objection"
+          },
+          {
+            "kind": "payoff",
+            "seconds": 8,
+            "caption": "With Learn, you can see how ads are performing, what's working and get insights…",
+            "note": "Screencast displaying built-in analytics dashboard and performance insights"
+          },
+          {
+            "kind": "cta",
+            "seconds": 8,
+            "caption": "Connect your LinkedIn ads account to Canva Grow and give it a try today",
+            "note": "Presenter delivers spoken CTA, transitions to brand logo end card"
+          }
+        ],
+        "captionColors": {
+          "hook": "white",
+          "steps": "white"
+        },
+        "cta": {
+          "placement": "endcard",
+          "example": "Connect your LinkedIn ads account to Canva Grow and give it a try today"
+        },
+        "model": "gemini-3.8-flash"
+      }
+    }
+  ]
+}

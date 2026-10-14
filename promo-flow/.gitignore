@@ -1,0 +1,17 @@
+node_modules/
+
+# Secrets: never commit API keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+service-account*.json
+
+# Deploy and hosting state
+.vercel
+.openai/
+
+*.log
+.DS_Store

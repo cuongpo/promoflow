@@ -1,0 +1,88 @@
+.view[hidden]{display:none!important}
+a.brand{color:inherit;text-decoration:none}
+a.button{text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.button.big{padding:14px 22px;font-size:14px}
+
+/* Landing */
+.site-nav{max-width:1200px;margin:0 auto;padding:20px 48px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.site-nav nav{display:flex;align-items:center;gap:18px}
+.nav-link{color:#b7bcc2;font-size:13px;font-weight:700;text-decoration:none}
+.nav-link:hover{color:#f4f4ef}
+.hero{max-width:1200px;margin:0 auto;padding:40px 48px 72px;display:grid;grid-template-columns:1fr 340px;gap:72px;align-items:center}
+.hero h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(44px,6vw,78px);line-height:1;letter-spacing:-2.5px;margin:18px 0 22px}
+.hero h1 em{font-style:normal;color:#c5f36a}
+.hero-lead{font-size:18px;line-height:1.55;color:#b7bcc2;max-width:580px;margin:0}
+.hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:30px}
+.hero-actions .link-button{font-size:13px;text-decoration:none}
+.hero-note{font-size:12px;color:#7f858c;margin:16px 0 0}
+.hero-visual img{display:block;width:100%;border-radius:24px;border:1px solid #2c3038;box-shadow:0 30px 80px #0009}
+.how{max-width:1200px;margin:0 auto;padding:0 48px 72px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.how-step{background:#1c1f26;border:1px solid #2c3038;border-radius:16px;padding:26px}
+.how-step span{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:#c5f36a}
+.how-step h3{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:10px 0 6px}
+.how-step p{color:#b7bcc2;font-size:14px;line-height:1.55;margin:0}
+.beats-section{max-width:1200px;margin:0 auto;padding:0 48px 72px}
+.beats-section h2{font-family:'Space Grotesk',sans-serif;font-size:28px;letter-spacing:-.5px;margin:10px 0 18px}
+.beat-strip{display:flex;gap:4px}
+.beat-strip div{min-width:0;overflow:hidden;border-radius:8px;padding:12px 8px;color:#16181d}
+.beat-strip strong{display:block;font-size:13px}
+.beat-strip span{font-size:12px}
+.beats-note{color:#7f858c;font-size:13px;margin:12px 0 0}
+.site-footer{max-width:1200px;margin:0 auto;padding:24px 48px 40px;border-top:1px solid #2c3038;display:flex;justify-content:space-between;color:#7f858c;font-size:12px}
+
+/* Start */
+.start-main{max-width:980px;margin:0 auto;padding:16px 48px 80px;display:flex;flex-direction:column;gap:24px}
+.start-card,.plan-card{background:#1c1f26;border:1px solid #2c3038;border-radius:20px;padding:32px}
+.start-card h1{font-family:'Space Grotesk',sans-serif;font-size:34px;letter-spacing:-1px;margin:10px 0 22px}
+.mode-tabs{display:inline-flex;gap:4px;padding:4px;margin-bottom:20px;background:#14161b;border:1px solid #2c3038;border-radius:10px}
+.mode-tab{border:0;background:transparent;color:#b7bcc2;font-size:13px;font-weight:700;padding:8px 14px;border-radius:7px}
+.mode-tab.active{background:#c5f36a;color:#18200e}
+.start-card label{display:block;margin:0 0 8px;color:#aeb3b3;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+.start-card label span{text-transform:none;letter-spacing:0;font-weight:500;color:#7f858c}
+.start-card input,.start-card textarea{width:100%;background:#14161b;border:1px solid #3d4148;border-radius:10px;color:#f1f1ec;padding:12px 14px;font-size:14px;outline:0;resize:vertical}
+.start-card input:focus,.start-card textarea:focus{border-color:#c5f36a}
+.start-pane .link-button{margin-top:10px}
+.prompt-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.prompt-chips button{border:1px solid #3d4148;background:#24272c;color:#d6dadf;border-radius:20px;padding:6px 12px;font-size:12px}
+.prompt-chips button:hover{border-color:#c5f36a}
+.step-two{margin-top:30px}
+.start-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 26px}
+.start-grid .wide{grid-column:1/-1}
+.plan-progress{color:#f0a868;font-size:13px;font-weight:700;margin:14px 0 0}
+.plan-source{display:inline-block;margin-top:14px;border:1px solid #f0a868;border-radius:6px;padding:3px 7px;color:#f0a868;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+.plan-head h2{font-family:'Space Grotesk',sans-serif;font-size:26px;letter-spacing:-.5px;margin:10px 0 6px}
+.plan-head p{color:#b7bcc2;font-size:14px;line-height:1.5;margin:4px 0}
+.plan-head .plan-ref{color:#e4e6e2}
+.plan-card .beat-bar{height:18px;margin-top:16px}
+.plan-cols{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:30px}
+.plan-cols h3{margin:0 0 14px;color:#aeb3b3;font-size:12px;letter-spacing:.6px;text-transform:uppercase}
+.plan-blocks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.plan-blocks li{display:flex;align-items:center;gap:12px}
+.plan-icon{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#18200e;font-size:15px}
+.plan-blocks strong{display:block;font-size:14px}
+.plan-blocks small{color:#9aa0a7;font-size:12px}
+.plan-shot{background:#14161b;border:1px solid #2c3038;border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.plan-shot strong{font-size:14px}
+.plan-shot small{display:block;margin-top:2px;color:#9aa0a7;font-size:12px}
+.plan-shot ul{margin:8px 0 0;padding-left:18px;color:#d6dadf;font-size:13px;line-height:1.55}
+.plan-actions{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-top:26px;padding-top:22px;border-top:1px solid #2c3038}
+.plan-actions span{color:#9aa0a7;font-size:13px}
+
+/* Shot list in the studio sidebar */
+.shot-list{margin:0 0 20px}
+.shot-group{width:100%;display:flex;gap:10px;text-align:left;background:#24262d;border:1px solid #34363d;border-radius:11px;color:#f5f6f3;padding:10px;margin-bottom:8px}
+.shot-group:hover{border-color:#c5f36a}
+.shot-group.done{border-color:#4f6041;background:#252b26}
+.shot-check{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#2e3430;color:#c5f36a;font-size:12px}
+.shot-group>span:last-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.shot-group strong{font-size:12px}
+.shot-group small{font-size:10px;color:#989ba0}
+.shot-group em{font-style:normal;font-size:10px;line-height:1.35;color:#d6dadf}
+
+@media(max-width:860px){
+  .hero{grid-template-columns:1fr;gap:40px}
+  .hero-visual{max-width:300px}
+  .how,.plan-cols,.start-grid{grid-template-columns:1fr}
+  .site-nav,.hero,.how,.beats-section,.start-main,.site-footer{padding-left:16px;padding-right:16px}
+  .beat-strip strong{font-size:11px}
+}

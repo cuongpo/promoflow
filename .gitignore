@@ -1,0 +1,30 @@
+# Secrets: API keys (Gemini, ElevenLabs, proxy) live in .env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+
+# Promo video project (Remotion source, renders, audio)
+promo-video/
+
+# Dependencies and build output
+node_modules/
+out/
+.cache/
+
+# Deploy and hosting state
+.vercel/
+.openai/
+
+# Logs and OS files
+*.log
+npm-debug.log*
+.DS_Store
+
+# Old git history of promo-flow, kept locally
+.promo-flow-git-backup/

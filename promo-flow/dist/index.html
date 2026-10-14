@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111318" />
+  <meta name="description" content="Paste a YouTube Short that works. PromoFlow reads its format, tells you what to record, and rebuilds it for your app." />
+  <title>PromoFlow — Copy what works. Ship your Short.</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23c5f36a%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2220%22 text-anchor=%22middle%22 fill=%22%231c2215%22%3E%E2%9C%B3%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./reel.css" />
+  <link rel="stylesheet" href="./create.css" />
+  <link rel="stylesheet" href="./pipeline.css" />
+  <link rel="stylesheet" href="./landing.css" />
+  <link rel="stylesheet" href="./library.css" />
+</head>
+<body>
+  <div class="view landing-view" id="homeView">
+    <header class="site-nav"><a class="brand" href="#/"><span class="brand-mark">✳</span><span>promoflow<span class="brand-dot">.</span></span><span class="beta">BETA</span></a><nav><a class="nav-link nav-secondary" href="#/studio">Studio</a><a class="button primary" href="#/library">✦ Make a Short</a></nav></header>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="panel-kicker">For app founders · YouTube Shorts</p>
+        <h1>Copy what works.<br><em>Ship your Short.</em></h1>
+        <p class="hero-lead">Browse app Shorts that already worked, with their real numbers. Pick one and PromoFlow tells you exactly what to record, then rebuilds it for your app from your own screen recording.</p>
+        <div class="hero-actions"><a class="button primary big" href="#/library">✦ Make a Short</a><a class="button light big" href="#/library">▶ Watch the sample</a><a class="link-button" id="continueBtn" href="#/studio" hidden>Continue my project →</a></div>
+        <p class="hero-note">No sign-up. Your files stay in your browser.</p>
+      </div>
+        <div class="hero-visual"><img src="sample/reel-cover.jpg" alt="A composed PromoFlow Short with a generated creator still and caption"></div>
+    </section>
+    <section class="how">
+      <div class="how-step"><span>01</span><h3>Pick a Short that worked</h3><p>Watch real app Shorts with their views and reach, or paste one you wish you had made.</p></div>
+      <div class="how-step"><span>02</span><h3>Get the plan</h3><p>Its format, beat by beat, the blocks you need, and a shot list of what to record.</p></div>
+      <div class="how-step"><span>03</span><h3>Run and post</h3><p>Your recording cut to every beat, captioned in the reference style, ready for Shorts.</p></div>
+    </section>
+    <section class="beats-section">
+      <p class="panel-kicker">A Short that works is a format, not footage</p>
+      <h2>Canva’s 43-second app Short, beat by beat</h2>
+      <div class="beat-strip" id="landingBeats"></div>
+      <p class="beats-note">PromoFlow reuses this structure, never the footage.</p>
+    </section>
+    <footer class="site-footer"><span>AI Builder Cup 2026 · Media, Content &amp; Digital Experiences</span><span>brolab</span></footer>
+  </div>
+
+  <div class="view start-view" id="startView" hidden>
+    <header class="site-nav"><a class="brand" href="#/"><span class="brand-mark">✳</span><span>promoflow<span class="brand-dot">.</span></span><span class="beta">BETA</span></a><nav><a class="nav-link" href="#/library">All Shorts</a><a class="nav-link nav-secondary" href="#/studio">Open studio</a></nav></header>
+    <main class="start-main">
+      <section class="start-card">
+        <div class="picked" id="startPicked" hidden></div>
+        <div class="format-chooser" id="formatChooser">
+        <p class="panel-kicker">Step 1 · The format</p>
+        <h1>What should your Short look like?</h1>
+        <div class="mode-tabs" role="tablist"><button class="mode-tab active" data-start-mode="url" role="tab">Paste a Short</button><button class="mode-tab" data-start-mode="prompt" role="tab">Describe it</button></div>
+        <div class="start-pane" data-start-pane="url">
+          <label for="startUrl">YouTube Shorts link</label>
+          <input id="startUrl" type="url" placeholder="https://youtube.com/shorts/…" autocomplete="off">
+          <div class="proven-picks" id="provenPicks" hidden>
+            <div class="proven-head"><p>No idea yet? Start from a Short that worked</p><a class="link-button" href="#/library">Watch them</a></div>
+            <div class="pick-row" id="pickRow"></div>
+          </div>
+        </div>
+        <div class="start-pane" data-start-pane="prompt" hidden>
+          <label for="startPrompt">Describe the Short you want</label>
+          <textarea id="startPrompt" rows="3" placeholder="A creator asks “What if…?”, then five quick app steps and a results screen"></textarea>
+          <div class="prompt-chips"><button type="button" data-prompt="A creator asks “What if you could…?”, then quick app steps, then results">Creator walkthrough</button><button type="button" data-prompt="POV hook, three quick steps, then an end card">POV tutorial</button><button type="button" data-prompt="A pain-point question, four fixes, then a payoff">Problem → fix</button></div>
+        </div>
+        </div>
+        <p class="panel-kicker step-two" id="appKicker">Step 2 · Your app</p>
+        <h1 class="app-title" id="appTitle" hidden>Now tell us about your app</h1>
+        <div class="start-grid">
+          <div><label for="startName">App name</label><input id="startName" maxlength="60" placeholder="e.g. Habitly"></div>
+          <div><label for="startPain">Pain it removes</label><input id="startPain" maxlength="60" placeholder="e.g. tracking habits"></div>
+          <div class="wide"><label for="startWhat">What it does</label><input id="startWhat" maxlength="200" placeholder="One sentence"></div>
+          <div class="wide"><label for="startSteps">Key steps in the app <span>(one per line)</span></label><textarea id="startSteps" rows="3" placeholder="Add a habit&#10;Check it off daily&#10;See your streak"></textarea></div>
+          <div class="wide"><label for="startResult">A real result <span>(optional)</span></label><input id="startResult" maxlength="80" placeholder="e.g. kept a 60-day streak"></div>
+        </div>
+        <button class="button primary big" id="analyzeBtn">✦ Analyze and plan</button>
+        <p class="plan-progress" id="planProgress" role="status" hidden></p>
+      </section>
+      <section class="plan-card" id="planCard" hidden></section>
+    </main>
+  </div>
+
+  <div class="view library-view" id="libraryView" hidden>
+    <header class="reel-top">
+      <a class="reel-back" href="#/" aria-label="Back to home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+      <a class="brand reel-brand" href="#/"><span class="brand-mark">✳</span><span>promoflow<span class="brand-dot">.</span></span></a>
+      <div class="reel-chips"><div class="domain-chips" id="domainChips" role="group" aria-label="Filter by domain"></div><a class="own-chip" href="#/start" id="ownShort">＋ Your own Short</a></div>
+    </header>
+    <main class="reel-feed" id="reelFeed" aria-label="App Shorts that worked"></main>
+    <div class="reel-nav"><button type="button" id="reelPrev" aria-label="Previous Short"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button type="button" id="reelNext" aria-label="Next Short"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <div class="sheet-backdrop" id="reelSheet" hidden><div class="reel-sheet" role="dialog" aria-modal="true" aria-label="Short details"><span class="sheet-grip" aria-hidden="true"></span><button class="close-button" type="button" id="closeSheet" aria-label="Close details">×</button><div id="sheetBody"></div></div></div>
+  </div>
+
+  <div class="app-shell view" id="studioView" hidden>
+    <header class="topbar">
+      <a class="brand" href="#/"><span class="brand-mark">✳</span><span>promoflow<span class="brand-dot">.</span></span><span class="beta">BETA</span></a>
+      <div class="project-name"><span class="project-icon">◈</span><input id="projectName" aria-label="Project name" value="Untitled promo" /><span class="saved" id="saveStatus">Saved locally</span></div>
+      <div class="top-actions"><a class="button ghost" href="#/library">＋ New Short</a><button class="button ghost" id="resetBtn" title="Reset to starter flow">Reset</button><button class="button primary" id="runBtn">✦ <span>Run</span></button><button class="button light" id="playBtn">▶ <span>Preview</span></button><button class="button light" id="exportBtn">↗ <span>Export video</span></button></div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar left-panel">
+        <div class="panel-kicker">YOUR WORKSPACE</div>
+        <h1>Copy what works.<br><em>Ship your Short.</em></h1>
+        <p class="intro">Paste a YouTube Short you want to copy. AI extracts its format and rebuilds it for your product.</p>
+        <div class="shot-list" id="shotListPanel" hidden></div>
+        <button class="sample-card" id="sampleBtn"><span>▶</span><span><strong>Try the sample</strong><small>A real Short, rebuilt for PromoFlow</small></span><span>↗</span></button>
+        <div class="create-form mock-note">
+          <div class="section-title"><span>MOCK MODE</span><span>✦</span></div>
+          <p>The Format extractor uses Gemini when the server has a key. Other AI blocks use demo outputs, including a generated creator still. Uploads and the composed reel are real.</p><p class="gemini-status" id="geminiStatus">Checking Gemini…</p>
+        </div>
+        <div class="section-title"><span>INPUTS</span><span>+</span></div>
+        <button class="add-card" data-add="reference"><span class="add-icon green">▶</span><span><strong>Reference Short</strong><small>YouTube Shorts link to copy</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="context"><span class="add-icon green">◈</span><span><strong>Product context</strong><small>Name, pain, result, features</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="shots"><span class="add-icon green">▦</span><span><strong>Screenshots</strong><small>App screens and results</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="demo"><span class="add-icon green">▶</span><span><strong>Demo video</strong><small>Screen recording</small></span><span class="plus">＋</span></button>
+        <div class="section-title"><span>AI</span><span>+</span></div>
+        <button class="add-card" data-add="format"><span class="add-icon orange">⧉</span><span><strong>Format extractor</strong><small>Gemini reads the Short’s beats</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="script"><span class="add-icon pink">✎</span><span><strong>Script writer</strong><small>Hook, steps, payoff, CTA</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="hookclip"><span class="add-icon pink">☺</span><span><strong>Hook clip</strong><small>Reaction clip or your face</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="proof"><span class="add-icon blue">★</span><span><strong>Proof collage</strong><small>Results grid from screenshots</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="cutter"><span class="add-icon blue">✂</span><span><strong>Demo cutter</strong><small>Numbered demo cuts</small></span><span class="plus">＋</span></button>
+        <div class="section-title"><span>OUTPUT</span><span>+</span></div>
+        <button class="add-card" data-add="composer"><span class="add-icon yellow">↗</span><span><strong>Reel composer</strong><small>9:16 reel + post caption</small></span><span class="plus">＋</span></button>
+        <button class="add-card" data-add="publish"><span class="add-icon red">⇪</span><span><strong>Publish to Shorts</strong><small>Title, description, upload</small></span><span class="plus">＋</span></button>
+        <button class="reel-preset" id="reelPresetBtn"><span>▣</span><span><strong>Starter pipeline</strong><small>Inputs → script → clips → reel</small></span><span>↗</span></button>
+        <div class="left-bottom">
+          <div class="guide"><span class="guide-icon">⌘</span><div><strong>How it works</strong><p>Drag blocks to arrange. Click an output dot, then a matching input dot to connect. Each wire carries one kind of data.</p></div></div>
+          <div class="hackathon-tag"><span class="status-dot"></span> AI BUILDER CUP 2026 <span>MEDIA & CONTENT</span></div>
+        </div>
+      </aside>
+
+      <section class="editor-area" aria-label="Video flow editor">
+        <div class="editor-toolbar"><div><span class="live-dot"></span><strong>Story canvas</strong><span class="toolbar-sub">Drag · Connect · Create</span></div><div class="toolbar-right"><span id="flowStats">4 blocks</span><button class="icon-button" id="fitBtn" title="Scroll to start">⌖</button></div></div>
+        <div class="canvas-scroll" id="canvasScroll"><div class="node-canvas" id="nodeCanvas"><svg id="connections" aria-hidden="true"></svg><div id="nodesLayer"></div></div></div>
+        <div class="sample-banner" id="sampleBanner" hidden><div><span class="panel-kicker">NEW HERE?</span><h2>Watch PromoFlow make a Short about itself</h2><p>Loads a real reference, <strong>Canva’s 43-second app Short</strong>, plus a real screen recording and real screens of PromoFlow. Every block runs and the Short opens when it’s done.</p></div><div class="sample-actions"><button class="button primary" id="sampleBannerBtn">✦ Load sample &amp; run</button><button class="link-button" id="dismissSample">Start from scratch</button></div></div>
+        <div class="canvas-hint" id="canvasHint">Select a block to edit it →</div>
+        <div class="timeline-wrap"><div class="timeline-heading"><strong>REEL TIMELINE</strong><span id="timelineDuration">Nothing composed yet</span></div><div class="timeline" id="timeline"></div></div>
+      </section>
+
+      <aside class="sidebar right-panel">
+        <div class="panel-tabs"><button class="tab active" id="editTab">Edit block</button><button class="tab" id="previewTab">Preview</button></div>
+        <div id="inspector"></div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="previewModal" hidden><div class="preview-modal" role="dialog" aria-modal="true" aria-label="Video preview"><div class="modal-top"><div><span class="panel-kicker">LIVE PREVIEW</span><h2 id="modalTitle">Your reel</h2></div><button class="close-button" id="closePreview" aria-label="Close preview">×</button></div><div class="preview-stage"><div class="phone-frame"><div class="phone-screen" id="phoneScreen"></div></div></div><div class="preview-controls"><button class="round-play" id="modalPlay">▶</button><div class="progress-track"><div id="progressBar"></div></div><span id="progressTime">00:00 / 00:15</span></div><div class="modal-footer"><label class="check-row shorts-toggle"><input type="checkbox" id="shortsUi" checked> Show YouTube Shorts UI</label><button class="button primary" id="modalExport">↗ Export video</button></div></div></div>
+  <div class="modal-backdrop" id="videoModal" hidden><div class="video-modal" role="dialog" aria-modal="true" aria-labelledby="videoTitle"><div class="modal-top"><div><h2 id="videoTitle"></h2><p id="videoMeta"></p></div><button class="close-button" id="closeVideo" aria-label="Close video">×</button></div><div class="video-frame" id="videoFrame"></div><div class="video-actions"><button class="button primary" id="videoUse">Use this format</button><a class="nav-link" id="videoYoutube" target="_blank" rel="noopener">Open on YouTube</a></div></div></div>
+  <script src="./app.js"></script>
+</body>
+</html>

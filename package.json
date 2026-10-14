@@ -1,0 +1,7 @@
+{
+  "name": "ai-builder-cup-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix promo-flow run dev"
+  }
+}

@@ -1,0 +1,164 @@
+/* Proven Shorts: a Shorts-style feed, plus its quick picks on the Start page */
+.library-view{position:fixed;inset:0;z-index:1;background:#0c0d10;overflow:hidden}
+.library-empty{color:#9aa0a7;font-size:14px;padding:120px 24px;text-align:center}
+.lib-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0;font-size:12px;color:#b7bcc2}
+.lib-domain{color:#c5f36a;font-weight:800}
+.needs{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.needs li{background:#2a2e35;border-radius:6px;padding:4px 9px;color:#e4e6e2;font-size:12px;font-weight:600}
+.beat-strip.compact{gap:3px}
+.beat-strip.compact div{border-radius:6px;padding:6px 7px;white-space:nowrap;text-overflow:ellipsis}
+.beat-strip.compact strong{font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.beat-strip.compact span{display:block;font-size:10px;opacity:.75;overflow:hidden}
+
+/* Top bar floats over the feed */
+.reel-top{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:16px;padding:14px 24px;padding-top:max(14px,env(safe-area-inset-top))}
+.reel-brand{min-width:0;flex:none;font-size:19px}
+.reel-brand .brand-mark{width:26px;height:26px;font-size:19px}
+.reel-back{display:none;flex:none;width:40px;height:40px;border-radius:50%;place-items:center;background:#0008;color:#fff}
+.reel-back svg,.reel-nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.reel-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;min-width:0;margin:0 auto}
+.reel-chips::-webkit-scrollbar{display:none}
+.reel-chips .domain-chips{display:flex;gap:8px;flex:none}
+.own-chip{flex:none;display:flex;align-items:center;border:1px dashed #ffffff55;border-radius:20px;padding:7px 14px;color:#f1f1ec;font-size:13px;font-weight:700;text-decoration:none;background:#16181dcc}
+.own-chip:hover{border-color:#c5f36a;color:#c5f36a}
+.reel-chips button{flex:none;border:1px solid #ffffff2e;background:#16181dcc;color:#f1f1ec;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;backdrop-filter:blur(6px)}
+.reel-chips button:hover{border-color:#c5f36a}
+.reel-chips button[aria-pressed=true]{background:#c5f36a;border-color:#c5f36a;color:#18200e}
+
+/* Feed: one Short per screen */
+.reel-feed{height:100%;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
+.reel-feed::-webkit-scrollbar{display:none}
+.feed-short{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;justify-content:center;align-items:center;gap:28px;padding:72px 96px 20px}
+.reel-stage{position:relative;height:100%;aspect-ratio:9/16;max-width:100%;border-radius:18px;overflow:hidden;background:#000;container-type:size;flex:none}
+.reel-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Sized to cover the stage, so a tall phone screen crops the sides instead of showing bars.
+   The extra scale crops YouTube's own Shorts chrome (title, avatar, share) off the edges; the feed has its own. */
+.reel-player{position:absolute;left:50%;top:50%;width:max(100cqw,56.25cqh);aspect-ratio:9/16;transform:translate(-50%,-50%) scale(1.24);pointer-events:none}
+.reel-player iframe{width:100%;height:100%;border:0;display:block;opacity:0;transition:opacity .4s}
+.feed-short.loaded .reel-player iframe{opacity:1}
+.reel-tap{position:absolute;inset:0;z-index:2;width:100%;border:0;padding:0;background:transparent;cursor:pointer}
+.reel-paused{position:absolute;left:50%;top:50%;z-index:3;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;display:none;place-items:center;background:#0009;color:#fff;font-size:24px;pointer-events:none}
+.feed-short.paused .reel-paused{display:grid}
+.reel-stage::after{content:'';position:absolute;left:0;right:0;bottom:0;height:58%;z-index:3;background:linear-gradient(transparent,#000000b8 55%,#000000e0);pointer-events:none}
+.reel-meta{position:absolute;left:16px;right:78px;bottom:16px;z-index:4;color:#fff;pointer-events:none;text-shadow:0 1px 3px #0009}
+.reel-meta button{pointer-events:auto;text-shadow:none}
+.reel-meta h2{font-family:'Space Grotesk',sans-serif;font-size:24px;letter-spacing:-.5px;margin:4px 0 2px}
+.reel-stats{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:2px 0 4px;font-size:13px;font-weight:700}
+.breakout{background:#c5f36a;color:#18200e;border-radius:6px;padding:2px 8px;text-shadow:none}
+.reel-channel{margin:0;font-size:12px;color:#c9cdd1}
+.reel-format{margin:8px 0 0;font-size:13px;line-height:1.4;color:#d6dadf;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.reel-meta .beat-bar{height:6px;margin:10px 0 14px;border-radius:3px}
+.reel-use{width:100%;justify-content:center;padding:13px 16px;font-size:14px}
+.reel-rail{position:absolute;right:10px;bottom:84px;z-index:4;display:flex;flex-direction:column;align-items:center;gap:16px;color:#fff}
+.reel-rail>*{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:0;color:inherit;font-size:12px;font-weight:700;text-shadow:0 1px 3px #0009}
+.reel-rail svg{width:46px;height:46px;padding:11px;border-radius:50%;background:#0000006b;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.reel-rail span svg{fill:#ffffff1f}
+.reel-rail button{cursor:pointer}
+.reel-rail button:hover svg{background:#000000a6}
+.reel-rail .reel-mute[aria-pressed=true] svg{background:#c5f36a;color:#18200e}
+.reel-rail b{font-weight:700}
+.reel-info{display:none!important}
+
+/* Details: a side panel on wide screens, a bottom sheet otherwise */
+.reel-panel,.reel-sheet{color:#e4e6e2;font-size:14px;line-height:1.5}
+.reel-panel{width:340px;max-height:100%;overflow-y:auto;scrollbar-width:thin;background:#1c1f26;border:1px solid #2c3038;border-radius:18px;padding:22px}
+.reel-panel h3,.reel-sheet h3{font-family:'Space Grotesk',sans-serif;font-size:24px;letter-spacing:-.5px;margin:6px 0 6px;color:#f4f4ef}
+.reel-panel h4,.reel-sheet h4{margin:18px 0 6px;color:#9aa0a7;font-size:12px;font-weight:700}
+.reel-panel p,.reel-sheet p{margin:0}
+.detail-summary{color:#d6dadf}
+.perf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0}
+.perf div{background:#14161b;border:1px solid #2c3038;border-radius:10px;padding:8px 10px;min-width:0}
+.perf dt{color:#8a9097;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.perf dd{margin:2px 0 0;font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:#f4f4ef;font-variant-numeric:tabular-nums}
+.detail-beats{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.detail-beats li{display:grid;grid-template-columns:54px 34px minmax(0,1fr);align-items:baseline;gap:8px;font-size:13px}
+.detail-beats span{border-radius:5px;padding:1px 0;text-align:center;color:#16181d;font-size:11px;font-weight:800}
+.detail-beats em{font-style:normal;color:#9aa0a7;font-variant-numeric:tabular-nums}
+.detail-beats b{font-weight:500;color:#d6dadf}
+.detail-list{margin:0;padding-left:18px;color:#d6dadf}
+.reel-panel .button,.reel-sheet .button{width:100%;justify-content:center;margin-top:22px}
+.detail-note{margin-top:14px!important;color:#7f858c;font-size:12px}
+.reel-nav{position:absolute;right:28px;top:50%;z-index:5;display:flex;flex-direction:column;gap:12px;transform:translateY(-50%)}
+.reel-nav button{width:48px;height:48px;border-radius:50%;border:0;display:grid;place-items:center;background:#2b2e35;color:#f4f4ef}
+.reel-nav button:hover:not(:disabled){background:#3a3e46}
+.sheet-backdrop{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:#000000a6}
+.sheet-backdrop[hidden]{display:none}
+.reel-sheet{position:relative;width:100%;max-width:560px;max-height:84dvh;overflow-y:auto;background:#1c1f26;border-radius:20px 20px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom))}
+.sheet-grip{display:block;width:40px;height:4px;border-radius:2px;background:#4a4e55;margin:0 auto 14px}
+.reel-sheet .close-button{position:absolute;top:12px;right:14px}
+
+/* Start: quick picks and the picked Short */
+.proven-picks{margin-top:18px}
+.proven-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}
+.proven-head p{margin:0;color:#b7bcc2;font-size:13px;font-weight:700}
+.proven-head .link-button{font-size:13px;padding:0;text-decoration:none;white-space:nowrap}
+.pick-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pick{display:flex;align-items:center;gap:9px;min-width:0;text-align:left;background:#14161b;border:1px solid #2c3038;border-radius:10px;padding:6px;color:#f1f1ec}
+.pick:hover{border-color:#5b6068}
+.pick[aria-pressed=true]{border-color:#c5f36a;background:#232a1c}
+.pick img{flex:none;width:30px;height:44px;object-fit:cover;border-radius:5px}
+.pick span{display:flex;flex-direction:column;min-width:0}
+.pick strong,.pick small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick strong{font-size:12px}
+.pick small{color:#8a9097;font-size:11px}
+.picked[hidden]{display:none}
+.picked{display:grid;grid-template-columns:96px minmax(0,1fr);gap:18px;margin-bottom:30px;background:#14161b;border:1px solid #4f6041;border-radius:14px;padding:14px}
+.picked-thumb{position:relative;display:block;padding:0;border:0;align-self:start;aspect-ratio:9/16;border-radius:8px;overflow:hidden;background:#000;cursor:pointer}
+.picked-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.picked-thumb span{position:absolute;left:50%;top:50%;width:32px;height:32px;margin:-16px 0 0 -16px;border-radius:50%;display:grid;place-items:center;background:#000a;color:#fff;font-size:11px}
+.picked-thumb:hover span{background:#c5f36a;color:#18200e}
+.picked-info{min-width:0;align-self:center}
+.picked-info strong{display:block;font-family:'Space Grotesk',sans-serif;font-size:22px;letter-spacing:-.4px;margin:6px 0 4px}
+.picked-info .lib-tags{margin-bottom:8px}
+.picked-info>p:not(.lib-tags):not(.panel-kicker){margin:0 0 10px;color:#b7bcc2;font-size:13px;line-height:1.45}
+.picked .beat-bar{height:8px;margin-top:0}
+.picked-actions{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:12px}
+.picked-actions .link-button{font-size:13px;padding:0;text-decoration:none}
+.picked-actions button.link-button{color:#b7bcc2}
+.app-title{font-family:'Space Grotesk',sans-serif;font-size:30px;letter-spacing:-1px;margin:8px 0 4px}
+.app-title+.start-grid,.app-title~.start-grid{margin-top:18px}
+.step-two:first-child,.picked:not([hidden])~.step-two{margin-top:0}
+
+/* Watch one Short from the Start page */
+.video-modal{width:min(420px,100%);max-height:94vh;overflow:auto;background:#202329;border:1px solid #3a3f42;border-radius:17px;box-shadow:0 30px 80px #000a;padding:18px}
+.video-modal .modal-top h2{margin:0}
+.video-modal .modal-top p{margin:4px 0 14px;color:#9aa0a7;font-size:13px}
+.video-frame{aspect-ratio:9/16;max-height:68vh;margin:0 auto;border-radius:12px;overflow:hidden;background:#000}
+.video-frame iframe{width:100%;height:100%;border:0;display:block}
+.video-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}
+
+.reel-chips button:focus-visible,.reel-rail button:focus-visible,.reel-nav button:focus-visible,.reel-back:focus-visible,.pick:focus-visible,.picked-thumb:focus-visible,.link-button:focus-visible{outline:2px solid #c5f36a;outline-offset:3px}
+.reel-tap:focus-visible{outline:3px solid #c5f36a;outline-offset:-3px}
+@media(prefers-reduced-motion:reduce){.reel-player iframe{transition:none}}
+
+/* No room for the side panel: details open as a sheet */
+@media(max-width:1080px){
+  .feed-short{padding:72px 88px 20px}
+  .reel-panel{display:none}
+  .reel-info{display:flex!important}
+}
+/* Landing beat strip legend, only needed where labels don't fit */
+.beat-legend{display:none;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:10px 0 0;padding:0;color:#b7bcc2;font-size:12px}
+.beat-legend li{display:flex;align-items:center;gap:6px}
+.beat-legend i{width:10px;height:10px;border-radius:3px}
+@media(max-width:600px){.beat-legend{display:flex}.beat-strip:not(.compact) div{padding:10px 6px}}
+/* Small phones: keep the site nav on one line */
+@media(max-width:420px){.site-nav .nav-secondary,.site-nav .nav-cta,.site-nav .beta{display:none}}
+/* Phones: the Short fills the screen */
+@media(max-width:700px){
+  .reel-top{padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));gap:10px;background:linear-gradient(#000000a0,transparent)}
+  .reel-brand,.reel-nav{display:none}
+  .reel-back{display:grid}
+  .reel-chips{margin:0}
+  .feed-short{padding:0}
+  .reel-stage{width:100%;height:100%;aspect-ratio:auto;border-radius:0}
+  .reel-meta{left:14px;right:72px;bottom:calc(14px + env(safe-area-inset-bottom))}
+  .reel-meta h2{font-size:22px}
+  .reel-rail{right:8px;bottom:calc(80px + env(safe-area-inset-bottom))}
+  .reel-rail svg{width:44px;height:44px}
+  .pick-row{display:flex;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px;scroll-padding:0 16px;scroll-snap-type:x proximity}
+  .pick-row::-webkit-scrollbar{display:none}
+  .pick{flex:0 0 150px;scroll-snap-align:start}
+  .start-card{padding:22px 16px}
+  .picked{grid-template-columns:64px minmax(0,1fr)}
+}
