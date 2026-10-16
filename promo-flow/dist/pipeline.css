@@ -69,6 +69,7 @@ body[data-connecting=images] .port.in.images,body[data-connecting=demo] .port.in
 .node.proof .node-header,.node.cutter .node-header{background:#2c3949;color:#c4dcfa}
 .node.composer .node-header{background:#41402e;color:#ffe7a0}
 .mock-tag{margin-left:auto;font-size:8px;letter-spacing:.8px;border:1px solid currentColor;border-radius:4px;padding:2px 4px;opacity:.75}
+.mock-tag.live{color:#c5f36a;border-color:#c5f36a;opacity:1}
 .node-thumb.strip{display:flex;gap:3px;background:none}.node-thumb.strip img{flex:1;min-width:0;border-radius:5px;object-position:top}
 .node-thumb.mock-face{position:relative;background:#273044}
 .node-thumb.mock-face span{position:absolute;bottom:4px;right:6px;font-size:8px;font-weight:800;letter-spacing:.8px;color:#fff;background:#0007;border-radius:4px;padding:2px 4px}

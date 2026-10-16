@@ -23,7 +23,37 @@
         <h1>Copy what works.<br><em>Ship your Short.</em></h1>
         <p class="hero-lead">Browse app Shorts that already worked, with their real numbers. Pick one and PromoFlow tells you exactly what to record, then rebuilds it for your app from your own screen recording.</p>
         <div class="hero-actions"><a class="button primary big" href="#/library">✦ Make a Short</a><a class="button light big" href="#/library">▶ Watch the sample</a><a class="link-button" id="continueBtn" href="#/studio" hidden>Continue my project →</a></div>
-        <p class="hero-note">No sign-up. Your files stay in your browser.</p>
+        <div class="api-config-card" id="apiConfigCard">
+          <div class="api-config-header">
+            <div class="api-config-title">
+              <span class="status-indicator-dot" id="apiStatusDot"></span>
+              <strong>Execution Mode</strong>
+            </div>
+            <div class="mock-toggle-container">
+              <span class="mock-toggle-label" id="mockToggleStateText">Mock mode: ON</span>
+              <label class="switch-toggle" title="Toggle Mock Mode">
+                <input type="checkbox" id="mockModeToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="api-config-desc" id="mockModeDesc">
+            <strong>Mock Mode is ON:</strong> Uses built-in format presets &amp; demo outputs (free offline mode, zero API costs).
+          </p>
+          <div class="api-key-field-group" id="apiKeyFieldGroup">
+            <div class="api-key-label-row">
+              <label for="shopApiKeyInput">ShopAIKey API Key</label>
+              <a href="https://shopaikey.com" target="_blank" rel="noopener" class="key-help-link">shopaikey.com ↗</a>
+            </div>
+            <div class="api-key-input-wrapper">
+              <input type="password" id="shopApiKeyInput" placeholder="Paste your ShopAIKey API key here" autocomplete="off">
+              <button type="button" class="btn-toggle-eye" id="toggleKeyVisibility" title="Show / Hide API key" aria-label="Toggle key visibility">👁</button>
+              <button type="button" class="button light btn-save-key" id="saveApiKeyBtn">Save</button>
+            </div>
+            <div class="api-key-status-msg" id="apiKeyStatusMsg">Key is stored in your browser and used when Mock Mode is OFF.</div>
+          </div>
+        </div>
+        <p class="hero-note">No sign-up. Your files and keys stay safe in your browser.</p>
       </div>
         <div class="hero-visual"><img src="sample/reel-cover.jpg" alt="A composed PromoFlow Short with a generated creator still and caption"></div>
     </section>
@@ -105,9 +135,16 @@
         <p class="intro">Paste a YouTube Short you want to copy. AI extracts its format and rebuilds it for your product.</p>
         <div class="shot-list" id="shotListPanel" hidden></div>
         <button class="sample-card" id="sampleBtn"><span>▶</span><span><strong>Try the sample</strong><small>A real Short, rebuilt for PromoFlow</small></span><span>↗</span></button>
-        <div class="create-form mock-note">
-          <div class="section-title"><span>MOCK MODE</span><span>✦</span></div>
-          <p>The Format extractor uses Gemini when the server has a key. Other AI blocks use demo outputs, including a generated creator still. Uploads and the composed reel are real.</p><p class="gemini-status" id="geminiStatus">Checking Gemini…</p>
+        <div class="create-form mock-note" id="studioMockCard">
+          <div class="section-title">
+            <span id="studioMockTitle">MOCK MODE</span>
+            <label class="switch-toggle-sm" title="Toggle Mock Mode">
+              <input type="checkbox" id="studioMockToggle" checked>
+              <span class="toggle-slider-sm"></span>
+            </label>
+          </div>
+          <p id="studioMockDesc">Mock mode is ON: The Format extractor and other blocks use built-in presets and demo outputs.</p>
+          <p class="gemini-status" id="geminiStatus">Checking API…</p>
         </div>
         <div class="section-title"><span>INPUTS</span><span>+</span></div>
         <button class="add-card" data-add="reference"><span class="add-icon green">▶</span><span><strong>Reference Short</strong><small>YouTube Shorts link to copy</small></span><span class="plus">＋</span></button>

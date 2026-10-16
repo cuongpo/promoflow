@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream';
 import { captureWebsite, browserPath } from './capture.mjs';
-import { siteContext, generateHooks, startVideo, videoStatus, videoFile, extractFormat, shortInfo } from './generate.mjs';
+import { siteContext, generateHooks, generateFullScript, startVideo, videoStatus, videoFile, extractFormat, shortInfo } from './generate.mjs';
 
 // Shared by the local server and the Vercel function, so both expose the same API.
 let activeCaptures = 0;
@@ -30,16 +30,19 @@ const routes = {
     json(response, 200, await shortInfo(input.url));
   },
   async format(input, response) {
-    json(response, 200, await extractFormat({ url: input.url, apiKey: input.apiKey }));
+    json(response, 200, await extractFormat({ url: input.url, apiKey: input.apiKey, baseUrl: input.baseUrl }));
   },
   async hooks(input, response) {
-    json(response, 200, await generateHooks(input.context || {}, { style: input.style, apiKey: input.apiKey }));
+    json(response, 200, await generateHooks(input.context || {}, { style: input.style, apiKey: input.apiKey, baseUrl: input.baseUrl }));
+  },
+  async script(input, response) {
+    json(response, 200, await generateFullScript(input.context || {}, { format: input.format, tone: input.tone, apiKey: input.apiKey, baseUrl: input.baseUrl }));
   },
   async video(input, response) {
-    json(response, 200, await startVideo({ prompt: input.prompt, image: typeof input.image === 'string' ? input.image : '', duration: input.duration, apiKey: input.apiKey }));
+    json(response, 200, await startVideo({ prompt: input.prompt, image: typeof input.image === 'string' ? input.image : '', duration: input.duration, apiKey: input.apiKey, baseUrl: input.baseUrl }));
   },
   async 'video-status'(input, response) {
-    json(response, 200, await videoStatus({ operation: input.operation, apiKey: input.apiKey }));
+    json(response, 200, await videoStatus({ operation: input.operation, apiKey: input.apiKey, baseUrl: input.baseUrl }));
   },
   async 'video-file'(input, response) {
     const download = await videoFile({ uri: input.uri, apiKey: input.apiKey });
@@ -54,6 +57,19 @@ export async function handleApi(route, method, input, response) {
   if (route === 'health') { json(response, 200, { ready: !!browserPath(), geminiConfigured: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) }); return; }
   if (!routes[route]) { json(response, 404, { error: 'Unknown API route' }); return; }
   if (method !== 'POST') { json(response, 405, { error: 'Use POST' }); return; }
-  try { await routes[route](input || {}, response); }
-  catch (error) { fail(response, error); }
+
+  const keyTag = input?.apiKey
+    ? `[Key: ${input.apiKey.length > 8 ? `${input.apiKey.slice(0, 4)}...${input.apiKey.slice(-4)}` : '****'}]`
+    : '[Key: env/default]';
+  const isShopAI = input?.baseUrl?.includes('shopaikey') || (input?.apiKey && !input.apiKey.startsWith('AIza'));
+  const provider = isShopAI ? 'ShopAIKey' : 'Google Gemini';
+
+  console.log(`[${new Date().toISOString()}] [API:${route}] ${provider} request ${keyTag}`);
+
+  try {
+    await routes[route](input || {}, response);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] [API:${route}] Error:`, error.message);
+    fail(response, error);
+  }
 }

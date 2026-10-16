@@ -1,4 +1,34 @@
 const STORAGE_KEY = 'promoflow-reel-v5';
+const MOCK_MODE_KEY = 'promoflow-mock-mode';
+const SHOPAI_KEY_KEY = 'promoflow-shopai-key';
+
+function isMockMode() {
+  const saved = localStorage.getItem(MOCK_MODE_KEY);
+  return saved === null ? true : saved === 'true';
+}
+function setMockMode(val) {
+  console.log(`[PromoFlow] Mock mode switched: ${val ? 'ON (Presets/Free)' : 'OFF (Live AI with ShopAIKey)'}`);
+  localStorage.setItem(MOCK_MODE_KEY, String(val));
+  syncApiConfigUI();
+  renderCanvas();
+  renderInspector();
+}
+function getShopApiKey() {
+  return (localStorage.getItem(SHOPAI_KEY_KEY) || '').trim();
+}
+function hasShopApiKey() {
+  return getShopApiKey().length > 0;
+}
+function setShopApiKey(key) {
+  const trimmed = (key || '').trim();
+  const masked = trimmed.length > 8 ? `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}` : (trimmed ? '****' : '(cleared)');
+  console.log(`[PromoFlow] ShopAIKey updated in browser storage: ${masked}`);
+  localStorage.setItem(SHOPAI_KEY_KEY, trimmed);
+  syncApiConfigUI();
+  renderCanvas();
+  renderInspector();
+}
+
 const DEMO_REACTION_IMAGE = './sample/reaction-creator.jpg';
 const $ = selector => document.querySelector(selector);
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -52,17 +82,17 @@ const PRESET_FORMAT = {
 // Formats annotated by hand from real Shorts, keyed by video ID. Used when Gemini is not connected.
 const KNOWN_FORMATS = {
   nAZD57mN78I:{
-    title:'Canva Grow walkthrough (43s, Canva)', summary:'Creator question hook → 5 app steps → objection → results → creator CTA', hookFormula:'A creator asks “What if you could…?” naming the whole job, then the app does it step by step', tone:'whatif',
+    title:'Canva Grow walkthrough (20s, Canva)', summary:'Creator question hook → 5 quick app steps → objection → results → CTA', hookFormula:'A creator asks “What if you could…?” naming the whole job, then the app does it step by step', tone:'whatif',
     beats:[
-      {kind:'hook', seconds:4, caption:'What if you could create your LinkedIn ad, launch your campaign, and see what’s working, all within Canva?', note:'Canva Verified Expert, face to camera'},
-      {kind:'step', seconds:6, caption:'With Canva Grow, start with a design you’ve already created', note:'Canva home, then an existing design'},
-      {kind:'step', seconds:2, caption:'Connect your LinkedIn Ads account', note:'Account connection screen'},
+      {kind:'hook', seconds:3.5, caption:'What if you could create your LinkedIn ad, launch your campaign, and see what’s working, all within Canva?', note:'Canva Verified Expert, face to camera'},
+      {kind:'step', seconds:2, caption:'With Canva Grow, start with a design you’ve already created', note:'Canva home, then an existing design'},
+      {kind:'step', seconds:1.5, caption:'Connect your LinkedIn Ads account', note:'Account connection screen'},
       {kind:'step', seconds:1.5, caption:'Set up your campaign', note:'Campaign form'},
-      {kind:'step', seconds:4, caption:'Get a little support from AI for what to say', note:'AI ad copy panel'},
-      {kind:'step', seconds:2, caption:'Choose who you want to reach, and you’re ready to go', note:'Targeting, then Submit'},
-      {kind:'turn', seconds:4.5, caption:'But nobody wants to throw money at an ad and hope for the best', note:'Back to the creator'},
-      {kind:'payoff', seconds:8.5, caption:'See how ads are performing and what’s working', note:'Performance dashboard'},
-      {kind:'cta', seconds:6.5, caption:'Create, launch, and learn, all in one place. Give it a try today.', note:'Creator recap, then a 4s Canva end card'}
+      {kind:'step', seconds:2, caption:'Get a little support from AI for what to say', note:'AI ad copy panel'},
+      {kind:'step', seconds:1.5, caption:'Choose who you want to reach, and you’re ready to go', note:'Targeting, then Submit'},
+      {kind:'turn', seconds:2.5, caption:'But nobody wants to throw money at an ad and hope for the best', note:'Objection transition over demo'},
+      {kind:'payoff', seconds:3, caption:'See how ads are performing and what’s working', note:'Performance dashboard'},
+      {kind:'cta', seconds:2.5, caption:'Create, launch, and learn, all in one place. Give it a try today.', note:'App end card with action button'}
     ],
     captionColors:{hook:'white', steps:'white'}, cta:{placement:'endcard', example:'Give it a try today'}
   }
@@ -90,7 +120,7 @@ function newNode(type, x, y, id) {
     shots:{shots:[]},
     demo:{mediaId:'', mediaName:'', duration:0},
     script:{tone:'confession', hook:'', twist:'', turn:'', steps:Array.from({length:4}, () => ({title:'', sub:''})), payoff:'', cta:''},
-    hookclip:{mode:'mock', generated:false, mediaId:'', mediaType:'', mediaName:'', duration:2.5},
+    hookclip:{mode:'ai', generated:false, mediaId:'', mediaType:'', mediaName:'', duration:2.5, prompt:''},
     proof:{generated:false, duration:3},
     cutter:{clipLength:2, cut:false},
     composer:{proofFlash:true, endCard:false, endDuration:2},
@@ -172,18 +202,26 @@ async function videoDuration(url) {
 const nodeById = id => state.nodes.find(node => node.id === id);
 const source = (node, port) => node ? nodeById(state.edges.find(edge => edge.to === node.id && edge.port === port)?.from) : undefined;
 const formatOf = script => script?.type === 'script' ? source(script, 'format')?.format || null : null;
-// Scene timing and caption colors copied from the reference format.
+// Scene timing and caption colors copied from the reference format, bounded for 15-28s high-retention Short.
 function timingOf(script) {
   const format = formatOf(script); if (!format) return null;
   const beats = format.beats, first = beats.findIndex(beat => beat.kind === 'step'), last = beats.findLastIndex(beat => beat.kind === 'step');
   const total = (list, kinds) => list.filter(beat => kinds.includes(beat.kind)).reduce((sum, beat) => sum + beat.seconds, 0);
-  return {hook:total(beats.slice(0, first), ['hook']) || 2.5, proof:total(beats.slice(0, first), ['proof']), steps:beats.filter(beat => beat.kind === 'step').map(beat => beat.seconds), payoff:total(beats.slice(last + 1), ['payoff', 'proof']), endCard:format.cta.placement === 'endcard', colors:format.captionColors};
+  return {
+    hook: clamp(total(beats.slice(0, first), ['hook']) || 3, 2.5, 4.5),
+    proof: clamp(total(beats.slice(0, first), ['proof']), 0, 1.5),
+    steps: beats.filter(beat => beat.kind === 'step').map(beat => clamp(beat.seconds, 1.5, 3)),
+    payoff: clamp(total(beats.slice(last + 1), ['payoff', 'proof']) || 3, 2, 3.5),
+    endCard: format.cta.placement === 'endcard',
+    colors: format.captionColors
+  };
 }
 const scriptOf = node => { const script = source(node, 'script'); return script?.type === 'script' && script.hook ? script : null; };
 function hookMedia(node) {
   if (node?.type !== 'hookclip') return null;
-  if (node.mode === 'mock') return node.generated ? {type:'mock'} : null;
-  return node.mediaId ? {id:node.mediaId, type:node.mediaType} : null;
+  if (node.mediaId) return {id:node.mediaId, type:node.mediaType || 'video'};
+  if (node.mode === 'mock' || node.mode === 'ai') return node.generated ? {type:'mock'} : null;
+  return null;
 }
 function proofMedia(node) {
   const ids = source(node, 'images')?.shots || [];
@@ -209,28 +247,103 @@ function composeReel(node) {
   const hook = hookMedia(hookNode), proof = proofMedia(proofNode), segments = cutSegments(cutNode), colors = timing?.colors || {hook:'white', steps:'yellow'};
   const format = formatOf(script);
   if (format) {
-    // Follow the reference beat by beat. Creator beats (hook, turn, spoken CTA) play the hook clip onward from where the last one stopped.
-    let creatorTime = 0, stepIndex = 0;
-    const creator = (kind, seconds, title, sub, color) => { if (!hook) return; scenes.push({kind, creator:true, media:hook, start:creatorTime, duration:seconds, title, sub, color}); creatorTime += seconds; };
-    for (const beat of format.beats) {
-      if (beat.kind === 'hook') creator('hook', beat.seconds, script.hook, script.twist, colors.hook);
-      else if (beat.kind === 'turn') { if (script.turn) creator('turn', beat.seconds, script.turn, '', colors.hook); }
-      else if (beat.kind === 'step') { const segment = segments[stepIndex++]; if (segment) scenes.push({kind:'step', ...segment, color:colors.steps}); }
-      else if (beat.kind === 'proof' && stepIndex === 0) { if (proof && hook) scenes.push({kind:'flash', media:proof, start:0, duration:beat.seconds, title:script.hook, sub:script.twist, color:colors.hook}); }
-      else if (beat.kind === 'proof' || beat.kind === 'payoff') { if (proof && script.payoff) scenes.push({kind:'payoff', media:proof, start:0, duration:beat.seconds, title:script.payoff, sub:''}); }
+    let stepIndex = 0;
+    // Creator hook scene plays the hook clip once at the beginning
+    const hookSec = hookNode?.duration && hookNode.duration > 1.5 ? Math.min(Math.max(hookNode.duration, 2.5), 4.5) : (timing?.hook || 3);
+    for (let bi = 0; bi < format.beats.length; bi++) {
+      const beat = format.beats[bi];
+      if (beat.kind === 'hook') {
+        if (hook) scenes.push({kind:'hook', creator:true, media:hook, start:0, duration:hookSec, title:script.hook, sub:script.twist, color:colors.hook});
+      }
+      else if (beat.kind === 'proof' && stepIndex === 0) {
+        if (proof && hook) scenes.push({kind:'flash', media:proof, start:0, duration:Math.min(beat.seconds || 1, 1.2), title:script.hook, sub:script.twist, color:colors.hook});
+      }
+      else if (beat.kind === 'step') {
+        // If there are more segments remaining than step beats left in format, include remaining segments so all steps are highlighted
+        const remainingStepBeats = format.beats.slice(bi + 1).filter(b => b.kind === 'step').length;
+        const takeCount = Math.max(1, segments.length - stepIndex - remainingStepBeats);
+        for (let i = 0; i < takeCount && stepIndex < segments.length; i++) {
+          const segment = segments[stepIndex++];
+          scenes.push({kind:'step', ...segment, duration: Math.min(Math.max(segment.duration || 2, 1.5), 3.0), color:colors.steps});
+        }
+      }
+      else if (beat.kind === 'turn') {
+        if (script.turn) {
+          const last = scenes.at(-1);
+          const turnMedia = last?.media || segments[0]?.media || proof;
+          scenes.push({
+            kind:'turn',
+            creator:false,
+            continue: !!last && last.media === turnMedia,
+            media: turnMedia,
+            start: last && last.media === turnMedia ? last.start + last.duration : 0,
+            duration: Math.min(Math.max(beat.seconds || 2.5, 2.0), 3.2),
+            title: script.turn,
+            sub: '',
+            color: colors.hook
+          });
+        }
+      }
+      else if (beat.kind === 'proof' || beat.kind === 'payoff') {
+        if (proof && script.payoff) {
+          scenes.push({
+            kind:'payoff',
+            creator:false,
+            media:proof,
+            start:0,
+            duration:Math.min(Math.max(beat.seconds || 3.0, 2.0), 3.5),
+            title:script.payoff,
+            sub:''
+          });
+        }
+      }
       else if (beat.kind === 'cta' && script.cta && scenes.length) {
-        if (hook?.type === 'video') creator('cta', beat.seconds, script.cta, app, colors.hook);
-        else { const last = scenes.at(-1); scenes.push({kind:'cta', continue:true, media:last.media, start:last.start + last.duration, duration:beat.seconds, title:script.cta, sub:app}); }
+        const last = scenes.at(-1);
+        scenes.push({
+          kind:'cta',
+          creator:false,
+          continue:true,
+          media:last.media,
+          start:last.start + last.duration,
+          duration:Math.min(Math.max(beat.seconds || 2.5, 2.0), 3.0),
+          title:script.cta,
+          sub:app
+        });
       }
     }
-    return {scenes, app, caption:script.cta || '', total:scenes.reduce((sum, scene) => sum + scene.duration, 0), hasHook:!!hook, hasSteps:segments.length > 0};
+  } else {
+    const hookSec = hookNode?.duration && hookNode.duration > 1.5 ? Math.min(Math.max(hookNode.duration, 2.5), 4.5) : (timing?.hook ?? 3);
+    if (hook) scenes.push({kind:'hook', creator:true, media:hook, start:0, duration:hookSec, title:script?.hook || '', sub:script?.twist || '', color:colors.hook});
+    if (hook && proof && (timing ? timing.proof > 0 : node.proofFlash)) scenes.push({kind:'flash', media:proof, start:0, duration:timing?.proof || 1, title:script?.hook || '', sub:script?.twist || '', color:colors.hook});
+    for (const segment of segments) scenes.push({kind:'step', ...segment, duration: Math.min(Math.max(segment.duration || 2, 1.5), 3), color:colors.steps});
+    if (proof && script?.payoff && (!timing || timing.payoff > 0)) scenes.push({kind:'payoff', creator:false, media:proof, start:0, duration:Math.min(timing?.payoff || proofNode.duration || 3, 3.5), title:script.payoff, sub:''});
+    if ((node.endCard || timing?.endCard) && script?.cta && scenes.length) { const last = scenes.at(-1); scenes.push({kind:'cta', creator:false, continue:true, media:last.media, start:last.start + last.duration, duration:Math.min(node.endDuration || 2.5, 3), title:script.cta, sub:app}); }
   }
-  if (hook) scenes.push({kind:'hook', media:hook, start:0, duration:timing?.hook ?? hookNode.duration, title:script?.hook || '', sub:script?.twist || '', color:colors.hook});
-  if (hook && proof && (timing ? timing.proof > 0 : node.proofFlash)) scenes.push({kind:'flash', media:proof, start:0, duration:timing?.proof || 1, title:script?.hook || '', sub:script?.twist || '', color:colors.hook});
-  for (const segment of segments) scenes.push({kind:'step', ...segment, color:colors.steps});
-  if (proof && script?.payoff && (!timing || timing.payoff > 0)) scenes.push({kind:'payoff', media:proof, start:0, duration:timing?.payoff || proofNode.duration, title:script.payoff, sub:''});
-  if ((node.endCard || timing?.endCard) && script?.cta && scenes.length) { const last = scenes.at(-1); scenes.push({kind:'cta', continue:true, media:last.media, start:last.start + last.duration, duration:node.endDuration, title:script.cta, sub:app}); }
-  return {scenes, app, caption:script?.cta || '', total:scenes.reduce((sum, scene) => sum + scene.duration, 0), hasHook:!!hook, hasSteps:segments.length > 0};
+
+  // Optimize total video length to 15s - 28s (standard short-form)
+  let total = scenes.reduce((sum, scene) => sum + scene.duration, 0);
+  if (total > 28) {
+    const factor = 24 / total;
+    for (const scene of scenes) {
+      if (scene.kind === 'hook') {
+        scene.duration = Math.max(2.5, Math.round(scene.duration * factor * 10) / 10);
+      } else if (scene.kind === 'flash') {
+        scene.duration = Math.max(0.8, Math.round(scene.duration * factor * 10) / 10);
+      } else {
+        scene.duration = Math.max(1.5, Math.round(scene.duration * factor * 10) / 10);
+      }
+    }
+    total = scenes.reduce((sum, scene) => sum + scene.duration, 0);
+  } else if (total < 15 && scenes.length > 0) {
+    const factor = 16 / total;
+    for (const scene of scenes) {
+      scene.duration = Math.round(scene.duration * factor * 10) / 10;
+    }
+    total = scenes.reduce((sum, scene) => sum + scene.duration, 0);
+  }
+  total = Math.round(total * 10) / 10;
+
+  return {scenes, app, caption:script?.cta || '', total, hasHook:!!hook, hasSteps:segments.length > 0};
 }
 const composers = () => state.nodes.filter(node => node.type === 'composer');
 const reelReady = node => { const reel = composeReel(node); return reel.hasHook && reel.hasSteps; };
@@ -241,12 +354,12 @@ function nodeStatus(node) {
   if (runState.get(node.id) === 'queued') return ['idle', 'Queued'];
   switch (node.type) {
     case 'reference': return node.mode === 'preset' ? ['ready', 'Preset format'] : node.mode === 'prompt' ? (node.prompt?.trim() ? ['ready', 'Described'] : ['idle', 'Describe the Short']) : youtubeId(node.url) ? ['ready', 'Short linked'] : ['idle', 'Paste a Shorts link'];
-    case 'format': return node.format ? ['ready', node.format.source === 'gemini' ? `Gemini · ${node.format.beats.length} beats` : `${({gemini:'Gemini', library:'Library', mock:'Mock', annotated:'Annotated', described:'Described', preset:'Preset'})[node.format.source] || 'Format'} · ${node.format.beats.length} beats`] : source(node, 'reference') ? ['idle', 'Extract format'] : ['warn', 'Connect a Short'];
+    case 'format': return node.format ? ['ready', node.format.source === 'shopaikey' ? `ShopAIKey · ${node.format.beats.length} beats` : node.format.source === 'gemini' ? `Gemini · ${node.format.beats.length} beats` : `${({gemini:'Gemini', shopaikey:'ShopAIKey', library:'Library', mock:'Mock', annotated:'Annotated', described:'Described', preset:'Preset'})[node.format.source] || 'Format'} · ${node.format.beats.length} beats`] : source(node, 'reference') ? ['idle', 'Extract format'] : ['warn', 'Connect a Short'];
     case 'context': return node.appName ? ['ready', 'Ready'] : ['idle', 'Add product info'];
     case 'shots': return node.shots.length ? ['ready', `${node.shots.length} screenshot${node.shots.length > 1 ? 's' : ''}`] : ['idle', 'Upload screenshots'];
     case 'demo': return node.mediaId ? ['ready', `Demo · ${node.duration || '?'}s`] : ['idle', 'Upload a screen recording'];
     case 'script': return node.hook ? ['ready', 'Script ready'] : source(node, 'context') ? ['idle', 'Generate script'] : ['warn', 'Connect context'];
-    case 'hookclip': return hookMedia(node) ? ['ready', node.mode === 'mock' ? 'Mock reaction ready' : 'Your clip'] : !scriptOf(node) ? ['warn', 'Needs a script'] : ['idle', node.mode === 'mock' ? 'Generate clip' : 'Upload a clip'];
+    case 'hookclip': return hookMedia(node) ? ['ready', node.mode === 'mock' ? 'Mock reaction ready' : (node.mode === 'ai' ? 'AI hook ready' : 'Your clip')] : !scriptOf(node) ? ['warn', 'Needs a script'] : ['idle', node.mode === 'upload' ? 'Upload a clip' : 'Generate hook'];
     case 'proof': return proofMedia(node) ? ['ready', `Collage · ${source(node, 'images').shots.length} images`] : !source(node, 'images')?.shots?.length ? ['warn', 'Needs screenshots'] : ['idle', 'Build collage'];
     case 'cutter': {
       if (!source(node, 'demo')?.mediaId && !source(node, 'images')?.shots?.length) return ['warn', 'Needs demo or screenshots'];
@@ -264,7 +377,7 @@ function nodeSummary(node) {
     case 'shots': return ['Screenshots', node.shots.length ? 'App screens and results' : 'PNG, JPG, or WebP'];
     case 'demo': return ['Demo video', node.mediaName || 'MP4 or WebM screen recording'];
     case 'script': return [node.hook || 'No script yet', node.twist || TONES[node.tone]];
-    case 'hookclip': return [node.mode === 'mock' ? 'AI reaction (mock)' : 'Your face clip', node.mode === 'mock' ? 'Generated sample creator still' : node.mediaName || 'Upload a 2–4s clip'];
+    case 'hookclip': return [node.mode === 'ai' ? 'AI hook clip' : (node.mode === 'mock' ? 'AI reaction (mock)' : 'Your face clip'), node.mediaName || (node.mode === 'ai' ? 'Generated from script (Veo)' : (node.mode === 'mock' ? 'Sample creator still' : 'Upload a 2–4s clip'))];
     case 'proof': return ['Proof collage', 'Flash after the hook, payoff at the end'];
     case 'cutter': return ['Demo cutter', `${node.clipLength}s per step · captions from script`];
     case 'publish': return [node.title || 'Publish to Shorts', node.title ? node.tags : 'Title, description, hashtags'];
@@ -291,12 +404,32 @@ function thumbFor(node) {
   if (node.type === 'hookclip') { const media = hookMedia(node); if (media?.type === 'mock') return `<div class="node-thumb mock-face"><img src="${DEMO_REACTION_IMAGE}" alt="Sample AI reaction still"><span>DEMO STILL</span></div>`; if (media && mediaUrls.get(media.id)) return `<div class="node-thumb">${media.type === 'video' ? `<video src="${escapeHTML(mediaUrls.get(media.id))}#t=0.5" muted playsinline preload="metadata"></video>` : `<img src="${escapeHTML(mediaUrls.get(media.id))}" alt="">`}</div>`; }
   return '';
 }
+function nodeTag(node) {
+  if (node.type === 'hookclip') {
+    if (node.mode === 'upload') return '<span class="mock-tag">CLIP</span>';
+    if (node.mode === 'ai') {
+      const isLive = !isMockMode() && (hasShopApiKey() || geminiReady);
+      return `<span class="mock-tag ${isLive ? 'live' : ''}">${isLive ? 'VEO' : 'AI MOCK'}</span>`;
+    }
+    return '<span class="mock-tag">MOCK</span>';
+  }
+  if (['format', 'script'].includes(node.type)) {
+    const isLive = node.source ? ['gemini', 'shopaikey'].includes(node.source) : (!isMockMode() && (hasShopApiKey() || geminiReady));
+    if (isLive) {
+      const label = (node.source === 'shopaikey' || hasShopApiKey()) ? 'SHOPAI' : 'GEMINI';
+      return `<span class="mock-tag live">${label}</span>`;
+    }
+    return '<span class="mock-tag">MOCK</span>';
+  }
+  if (META[node.type].group === 'ai') return '<span class="mock-tag">MOCK</span>';
+  return '';
+}
 function nodeHTML(node) {
   const meta = META[node.type], [title, body] = nodeSummary(node), [statusClass, statusText] = nodeStatus(node), out = PORTS[node.type].out;
   const inputs = PORTS[node.type].in.map(port => { const from = source(node, port); return `<div class="port-row"><span class="port in ${port}" data-port="${port}" title="${PORT_LABEL[port]} input"></span><span>${PORT_LABEL[port]}</span><span class="port-source">${from ? escapeHTML(META[from.type].label) : 'not connected'}</span></div>`; }).join('');
   const run = runState.get(node.id), badge = {running:'<span class="run-badge">⟳</span>', done:'<span class="run-badge">✓</span>', skipped:'<span class="run-badge">–</span>', error:'<span class="run-badge">!</span>'}[run] || '';
   return `<div class="node ${node.type} group-${meta.group} ${state.selected === node.id ? 'selected' : ''} ${run ? `run-${run}` : ''} ${lastFinished === node.id ? 'run-flash' : ''}" data-id="${node.id}" style="left:${node.x}px;top:${node.y}px">
-    <div class="node-header"><span>${meta.icon}</span><span>${meta.label}</span>${meta.group === 'ai' ? `<span class="mock-tag">${node.type === 'format' && (node.format ? node.format.source === 'gemini' : geminiReady) ? 'GEMINI' : 'MOCK'}</span>` : ''}${badge}</div>
+    <div class="node-header"><span>${meta.icon}</span><span>${meta.label}</span>${nodeTag(node)}${badge}</div>
     ${inputs ? `<div class="node-inputs">${inputs}</div>` : ''}
     <div class="node-body"><h3>${escapeHTML(title)}</h3><p>${escapeHTML(body)}</p>${thumbFor(node)}</div>
     <div class="node-foot"><span class="status ${statusClass}">${escapeHTML(statusText)}</span>${out ? `<span class="out-label">${PORT_LABEL[out]}</span><span class="port out ${out}" data-port="${out}" title="${PORT_LABEL[out]} output"></span>` : ''}</div></div>`;
@@ -376,8 +509,8 @@ const inspectors = {
     ${node.mode === 'prompt' ? field('Description', 'prompt', node.prompt, {tag:'textarea', max:400, placeholder:'A creator asks a question, then 4 quick app steps…'}) : ''}
     ${node.mode === 'prompt' ? '' : node.mode === 'url' ? `${field('Shorts URL', 'url', node.url, {max:200, placeholder:'https://youtube.com/shorts/…', hint:'A public Short whose structure you want to copy. Only its format is used, not its footage.'})}${youtubeId(node.url) ? `<a class="yt-link" href="https://www.youtube.com/shorts/${youtubeId(node.url)}" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/${youtubeId(node.url)}/hqdefault.jpg" alt="Short thumbnail"><span>Open on YouTube ↗</span></a>` : ''}` : '<div class="media-note">A 16-second UGC app promo: confession hook, one-second proof flash, four numbered steps, results payoff, CTA in the post caption.</div>'}`,
   format:node => { const format = node.format; return `${inputChips(node)}${runButton(node, 'extractFormat', format ? '↻ Re-extract format' : '✦ Extract format')}
-    <small class="muted">With a Gemini key on the server, Gemini watches the Short and returns its beats. Without one, the preset format is used and marked as mock.</small>
-    ${format ? `<div class="form-group"><label>${format.source === 'gemini' ? 'Extracted by Gemini' : format.source === 'mock' ? `Mock result · ${escapeHTML(format.title)}` : format.source === 'annotated' ? `Annotated by hand · ${escapeHTML(format.title)}` : format.source === 'described' ? `Picked from your description · ${escapeHTML(format.title)}` : format.source === 'library' ? 'Scanned by Gemini for the Library' : 'Preset format'}</label>${format.source === 'annotated' ? '<small class="muted">Beats and timings were measured from this Short by hand. With a Gemini key on the server, Gemini extracts them instead.</small>' : ''}${format.source === 'mock' ? '<small class="muted">Picked from a format library, not from this video. With a Gemini key on the server, Gemini watches the Short instead.</small>' : ''}<div class="format-card"><strong>${escapeHTML(format.summary)}</strong><p>${escapeHTML(format.hookFormula)}</p>${beatBar(format)}<ol class="beats">${format.beats.map(beat => `<li><span style="background:${BEAT_COLOR[beat.kind]}">${beat.kind}</span><div><b>${escapeHTML(beat.caption || '—')}</b><small>${escapeHTML(beat.note)}</small></div><em>${beat.seconds}s</em></li>`).join('')}</ol><p class="format-meta">Captions: hook ${format.captionColors.hook}, steps ${format.captionColors.steps} · CTA in ${format.cta.placement === 'endcard' ? 'an end card' : 'the post caption'}</p></div></div>` : ''}`; },
+    <small class="muted">${isMockMode() ? 'Mock mode is ON. Toggle off on the home page or sidebar to use your ShopAIKey API key.' : (hasShopApiKey() ? 'ShopAIKey is active. Live Gemini analysis will watch the video.' : 'Live mode enabled. Add your ShopAIKey on the home page.')}</small>
+    ${format ? `<div class="form-group"><label>${format.source === 'shopaikey' ? 'Extracted via ShopAIKey (Gemini)' : format.source === 'gemini' ? 'Extracted by Gemini' : format.source === 'mock' ? `Mock result · ${escapeHTML(format.title)}` : format.source === 'annotated' ? `Annotated by hand · ${escapeHTML(format.title)}` : format.source === 'described' ? `Picked from your description · ${escapeHTML(format.title)}` : format.source === 'library' ? 'Scanned by Gemini for the Library' : 'Preset format'}</label>${format.source === 'annotated' ? '<small class="muted">Beats and timings were measured from this Short by hand.</small>' : ''}${format.source === 'mock' ? '<small class="muted">Picked from a format library (Mock mode).</small>' : ''}<div class="format-card"><strong>${escapeHTML(format.summary)}</strong><p>${escapeHTML(format.hookFormula)}</p>${beatBar(format)}<ol class="beats">${format.beats.map(beat => `<li><span style="background:${BEAT_COLOR[beat.kind]}">${beat.kind}</span><div><b>${escapeHTML(beat.caption || '—')}</b><small>${escapeHTML(beat.note)}</small></div><em>${beat.seconds}s</em></li>`).join('')}</ol><p class="format-meta">Captions: hook ${format.captionColors.hook}, steps ${format.captionColors.steps} · CTA in ${format.cta.placement === 'endcard' ? 'an end card' : 'the post caption'}</p></div></div>` : ''}`; },
   publish:node => { const composer = source(node, 'reel'); return `${inputChips(node)}${runButton(node, 'writeMetadata', node.title ? '↻ Rewrite title + description (mock)' : '✦ Write title + description (mock)')}
     ${field(`Title · ${node.title.length}/100`, 'title', node.title, {max:100})}
     ${field('Description', 'description', node.description, {tag:'textarea', max:5000})}
@@ -400,9 +533,71 @@ const inspectors = {
     ${node.steps.map((step, index) => `<div class="form-group step-group"><label>Step ${index + 1}</label><input data-step="${index}" data-key="title" value="${escapeHTML(step.title)}" maxlength="50" placeholder="Yellow caption"><input data-step="${index}" data-key="sub" value="${escapeHTML(step.sub)}" maxlength="60" placeholder="Optional white sub-caption"></div>`).join('')}
     ${field('Payoff line', 'payoff', node.payoff, {max:90, hint:'Over the results collage at the end.'})}
     ${field('CTA / post caption', 'cta', node.cta, {max:90, hint:'Goes in the post caption; optionally an end card.'})}`,
-  hookclip:node => `${inputChips(node)}${select('Source', 'mode', node.mode, {mock:'AI reaction clip (mock)', upload:'Upload my own clip'}, true)}
-    ${node.mode === 'mock' ? `${runButton(node, 'generateHook', node.generated ? '↻ Regenerate reaction (mock)' : '✦ Generate reaction (mock)')}<small class="muted">Demo uses a generated creator still with a subtle camera move. It is not a generated video or a reaction to your specific hook.</small>${node.generated ? `<div class="media-preview"><img src="${DEMO_REACTION_IMAGE}" alt="Generated sample creator reaction"></div>` : ''}` : `<div class="form-group"><label>Your clip</label>${uploadBox('hookUpload', node.mediaId ? `Replace ${escapeHTML(node.mediaName)}` : '＋ Upload a face-to-camera clip', 'video/mp4,video/webm,image/png,image/jpeg,image/webp')}</div>`}
-    ${range('Hook length', 'duration', node.duration, 1.5, 4, .5)}`,
+  hookclip:node => {
+    const script = scriptOf(node);
+    const effectivePrompt = node.prompt || (script ? defaultHookPrompt(node) : '');
+    return `${inputChips(node)}${select('Source', 'mode', node.mode || 'ai', {
+      ai:'✦ Generate AI hook from script (Veo)',
+      upload:'Upload my own clip',
+      mock:'AI reaction clip (mock)'
+    }, true)}
+    ${node.mode === 'ai' ? `
+      ${!script ? '<div class="media-note" style="border-left:3px solid #f0a868;">Connect a Script writer block with a hook line to generate an AI hook clip.</div>' : `
+        <div class="form-group">
+          <label>Script Hook Line</label>
+          <div style="padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;">“${escapeHTML(script.hook)}”</div>
+          ${script.twist ? `<small class="muted" style="display:block;margin-bottom:8px;">Twist: “${escapeHTML(script.twist)}”</small>` : ''}
+        </div>
+      `}
+      <div class="form-group">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <label style="margin:0;">AI Video Prompt (Veo 3.1)</label>
+          <button class="link-button" id="resetHookPrompt" type="button" style="font-size:11px;">↺ Reset to script</button>
+        </div>
+        <textarea data-field="prompt" rows="3" maxlength="800" placeholder="A vertical 9:16 UGC video of a creator speaking...">${escapeHTML(effectivePrompt)}</textarea>
+        <small class="muted">Editable video prompt sent to Google Veo 3.1 Fast.</small>
+      </div>
+      ${runButton(node, 'generateHook', (node.mediaId || node.generated) ? '↻ Regenerate AI hook from script' : '✦ Generate AI hook from script')}
+      <small class="muted">${isMockMode() ? 'Mock mode is ON — generates simulated clip without using API credits. Toggle off on the home page for live Veo 3.1 video.' : (hasShopApiKey() ? 'ShopAIKey is active. Will generate a 9:16 vertical clip using Google Veo 3.1 Fast.' : 'Add your ShopAIKey on the home page to enable live Veo 3.1 video generation.')}</small>
+      ${node.mediaId && mediaUrls.get(node.mediaId) ? `
+        <div class="media-preview">
+          <video src="${escapeHTML(mediaUrls.get(node.mediaId))}" controls playsinline loop autoplay></video>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+          <span>${escapeHTML(node.mediaName || 'ai-hook.mp4')}</span>
+          <button class="link-button" id="clearHookMedia" type="button" style="color:#ff6b6b;font-size:11px;">✕ Remove clip</button>
+        </div>
+      ` : node.generated && !node.mediaId ? `
+        <div class="media-preview">
+          <img src="${DEMO_REACTION_IMAGE}" alt="Sample creator reaction">
+        </div>
+        <div style="font-size:11px;color:#888;text-align:center;margin-top:6px;">Simulated creator still (Mock mode)</div>
+      ` : ''}
+    ` : node.mode === 'upload' ? `
+      <div class="form-group">
+        <label>Your clip</label>
+        ${uploadBox('hookUpload', node.mediaId ? `Replace ${escapeHTML(node.mediaName)}` : '＋ Upload a face-to-camera clip', 'video/mp4,video/webm,image/png,image/jpeg,image/webp')}
+      </div>
+      ${node.mediaId && mediaUrls.get(node.mediaId) ? `
+        <div class="media-preview">
+          ${node.mediaType === 'video' ? `<video src="${escapeHTML(mediaUrls.get(node.mediaId))}" controls playsinline loop autoplay></video>` : `<img src="${escapeHTML(mediaUrls.get(node.mediaId))}" alt="Uploaded clip">`}
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+          <span>${escapeHTML(node.mediaName)}</span>
+          <button class="link-button" id="clearHookMedia" type="button" style="color:#ff6b6b;font-size:11px;">✕ Remove clip</button>
+        </div>
+      ` : ''}
+      <div style="margin-top:12px;padding:10px 12px;background:rgba(239,184,211,0.08);border:1px dashed rgba(239,184,211,0.3);border-radius:6px;font-size:12px;display:flex;align-items:center;justify-content:space-between;">
+        <span>Don’t have a face recording?</span>
+        <button class="link-button" id="switchToAiHook" type="button" style="color:#efb8d3;font-weight:600;">✦ Generate with AI instead →</button>
+      </div>
+    ` : `
+      ${runButton(node, 'generateHook', node.generated ? '↻ Regenerate reaction (mock)' : '✦ Generate reaction (mock)')}
+      <small class="muted">Demo uses a generated creator still with a subtle camera move. It is not a generated video or a reaction to your specific hook.</small>
+      ${node.generated ? `<div class="media-preview"><img src="${DEMO_REACTION_IMAGE}" alt="Generated sample creator reaction"></div>` : ''}
+    `}
+    ${range('Hook length', 'duration', node.duration || 2.5, 1.5, 6, .5)}`;
+  },
   proof:node => `${inputChips(node)}${runButton(node, 'buildProof', node.generated ? '↻ Rebuild collage (mock)' : '✦ Build collage (mock)')}
     <small class="muted">Mock: tiles your screenshots into a grid. It flashes for 1s under the hook, then returns at the end with the payoff line.</small>
     ${range('Payoff length', 'duration', node.duration, 2, 5, .5)}`,
@@ -449,7 +644,10 @@ function renderInspector() {
   on('#publishDownload', () => { state.selected = source(node, 'reel').id; exportVideo(); });
   on('#publishCopy', () => navigator.clipboard?.writeText(`${node.title}\n\n${node.description}\n\n${node.tags}`).then(() => toast('Title, description, and hashtags copied'), () => toast('Could not copy — select the text instead')));
   on('#extractFormat', () => runFormat(node).catch(error => toast(error.message)));
-  on('#generateHook', () => runMock(node, () => { node.generated = true; }, 'Mock reaction clip ready'));
+  on('#generateHook', () => generateHookClip(node));
+  on('#switchToAiHook', () => { node.mode = 'ai'; changed(true); });
+  on('#resetHookPrompt', () => { node.prompt = defaultHookPrompt(node); changed(true); });
+  on('#clearHookMedia', () => { node.mediaId = ''; node.mediaName = ''; node.generated = false; changed(true); });
   on('#buildProof', () => source(node, 'images')?.shots?.length ? runMock(node, () => { node.generated = true; }, 'Proof collage ready') : toast('Connect Screenshots with at least one image first'));
   on('#runCutter', () => runMock(node, () => { node.cut = true; }, 'Demo cut into numbered steps'));
   on('#copyCaption', () => navigator.clipboard?.writeText(composeReel(node).caption).then(() => toast('Caption copied'), () => toast('Could not copy — select the text instead')));
@@ -500,13 +698,62 @@ const STEPS = {
   async script(node) {
     const context = source(node, 'context');
     if (!context?.appName) throw new Error('Script writer needs a connected Product context with a name');
-    if (node.hook && node.basedOn === scriptKey(node)) { await pause(400); return 'done'; }
-    await mockStages(node, STAGES.script); Object.assign(node, mockScript(context, node), {basedOn:scriptKey(node)}); return 'done';
+    const currentKey = scriptKey(node);
+    if (node.hook && node.basedOn === currentKey) { await pause(400); return 'done'; }
+    if (!isMockMode()) {
+      const apiKey = getShopApiKey();
+      if (apiKey || geminiReady) {
+        stageText.set(node.id, 'Writing AI script with Gemini…');
+        renderCanvas();
+        try {
+          const res = await fetch('/api/script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              context: {
+                appName: context.appName,
+                description: context.description,
+                audience: context.audience,
+                pain: context.pain,
+                result: context.result,
+                features: context.features
+              },
+              format: formatOf(node),
+              tone: node.tone,
+              apiKey: apiKey || undefined,
+              baseUrl: 'https://api.shopaikey.com/v1beta'
+            })
+          });
+          if (res.ok) {
+            const aiScript = await res.json();
+            Object.assign(node, aiScript, { basedOn: currentKey });
+            return 'done';
+          }
+        } catch (err) {
+          console.warn('[PromoFlow] Live script generation failed, falling back:', err);
+        }
+      }
+    }
+    await mockStages(node, STAGES.script);
+    Object.assign(node, mockScript(context, node), { basedOn: currentKey });
+    return 'done';
   },
   async hookclip(node) {
     if (!scriptOf(node)) throw new Error('Hook clip needs a connected Script writer');
-    if (node.mode === 'upload') { if (!node.mediaId) throw new Error('Upload your hook clip, or switch Hook clip to the AI mock'); await pause(300); return 'done'; }
-    await mockStages(node, STAGES.hookclip); node.generated = true; return 'done';
+    if (node.mode === 'upload') {
+      if (!node.mediaId) throw new Error('Upload your hook clip, or switch Hook clip to AI generator');
+      await pause(300);
+      return 'done';
+    }
+    if (node.mode === 'ai') {
+      if (node.mediaId) { await pause(300); return 'done'; }
+      await generateHookClip(node);
+      if (!hookMedia(node)) throw new Error('AI hook clip was not generated');
+      return 'done';
+    }
+    await mockStages(node, STAGES.hookclip);
+    node.generated = true;
+    return 'done';
   },
   async proof(node) {
     if (!source(node, 'images')?.shots?.length) { await pause(250); return 'skipped'; }
@@ -568,20 +815,32 @@ async function runPipeline() {
 // ---------- Sample project ----------
 // PromoFlow makes a Short about itself: Canva's Short is the reference; the recording and screens in dist/sample are real PromoFlow footage.
 const SAMPLE_REFERENCE = 'https://youtube.com/shorts/nAZD57mN78I';
-const SAMPLE_CONTEXT = {appName:'PromoFlow', description:'Turns a YouTube Short that already works into a Short for your app, built from your own screen recording.', audience:'app founders', pain:'making Shorts for your app', result:'made this Short in one Run', features:'Paste a Short you want to copy\nAdd your app’s screen recording\nPress Run\nGet a Short ready to post'};
+const SAMPLE_CONTEXT = {
+  appName: 'Fitness Online',
+  description: 'All-in-one home fitness app offering 3D workouts, diet tracking, and online coach hiring.',
+  audience: 'Men and women wanting to lose weight, build muscle, or stay fit at home.',
+  pain: 'Staying consistent, mastering correct form, and figuring out meal plans alone.',
+  result: 'Built muscle and reached body goals with custom programs guided by elite coaches.',
+  features: 'Over 850 exercises with high-quality 3D animations\nReady workouts and diet plans designed by champion bodybuilders\nCalorie counter and food tracker with 5,000+ items\nBuilt-in personal workout and fitness progress diary\nDirect in-app chat and 1-on-1 personal coach hiring'
+};
 const isBlank = () => !state.nodes.some(node => node.appName || node.mediaId || node.shots?.length || node.hook);
 async function loadSample() {
   const file = async (path, type) => new File([await (await fetch(path)).blob()], path.split('/').pop(), {type});
   const [shots, demo] = await Promise.all([
-    Promise.all([1, 2, 3, 4].map(async index => storeMedia(await file(`sample/screen-${index}.jpg`, 'image/jpeg')))),
-    file('sample/demo.mp4', 'video/mp4').then(storeMedia)
+    Promise.all([1, 2, 3, 4, 5].map(async index => storeMedia(await file(`sample/${index}.webp`, 'image/webp')))),
+    file('sample/app-trailer.mp4', 'video/mp4').then(storeMedia)
   ]);
-  state = starterProject(); state.name = 'PromoFlow sample Short'; state.sampleSeen = true;
+  state = starterProject(); state.name = 'Fitness Online Short'; state.sampleSeen = true;
   Object.assign(nodeById('reference'), {mode:'url', url:SAMPLE_REFERENCE});
   lookupShort(nodeById('reference'));
   Object.assign(nodeById('context'), SAMPLE_CONTEXT);
   nodeById('shots').shots = shots;
-  Object.assign(nodeById('demo'), {mediaId:demo, mediaName:'promoflow-screen-recording.mp4', duration:await videoDuration(mediaUrls.get(demo))});
+  Object.assign(nodeById('demo'), {mediaId:demo, mediaName:'app-trailer.mp4', duration:await videoDuration(mediaUrls.get(demo))});
+  const sampleFormat = KNOWN_FORMATS.nAZD57mN78I;
+  Object.assign(nodeById('format'), {format:sampleFormat, key:'nAZD57mN78I'});
+  const scriptNode = nodeById('script');
+  Object.assign(scriptNode, writeScript(SAMPLE_CONTEXT, sampleFormat), {basedOn:scriptKey(scriptNode)});
+  state.shotList = shotList(sampleFormat, scriptNode);
   $('#projectName').value = state.name; renderCanvas(); renderInspector(); save();
 }
 async function trySample() {
@@ -608,20 +867,28 @@ function ctaLike(example, name) {
   if (/comment|save/i.test(example) || !example) return `SAVE + comment “${word}” and I’ll send you the link`;
   return `Try ${name} free`;
 }
-const scriptKey = node => { const format = formatOf(node); return `${format?.videoId || format?.source || 'none'}:${format?.beats.length || 0}:${node.tone}`; };
+const scriptKey = node => {
+  const format = formatOf(node);
+  const context = source(node, 'context');
+  const ctx = context ? `${context.appName}:${context.pain}:${context.result}:${(context.features || '').slice(0, 120)}` : 'none';
+  return `${format?.videoId || format?.source || 'none'}:${format?.beats?.length || 0}:${node.tone}:${ctx}`;
+};
 const mockScript = (context, node) => writeScript(context, formatOf(node), node.tone);
 function writeScript(context, format, fallbackTone = 'confession') {
   const tone = format?.tone || fallbackTone, stepCount = format ? clamp(format.beats.filter(beat => beat.kind === 'step').length, 1, 6) : 4;
-  const name = context.appName || 'this app', pain = context.pain.trim() || 'this', result = context.result.trim();
+  const name = context.appName || 'this app', pain = (context.pain || '').trim() || 'staying consistent', result = (context.result || '').trim();
   const hooks = {
     confession:[`“I’m so bad at ${pain}”`, result ? `Meanwhile I ${result}…` : `Meanwhile ${name} does it for me…`],
     pov:[`POV: you stopped struggling with ${pain}`, result ? `and ${result}` : `${name} handles it now`],
     problem:[`Still bad at ${pain}?`, result ? `I ${result} with this…` : 'Watch this…'],
-    whatif:[`What if ${context.pain.trim() ? `${context.pain.trim()} took one click` : `${name} did it for you`}?`, `With ${name}, it does.`]
+    whatif:[`What if ${context.pain?.trim() ? `${context.pain.trim()} took one click` : `${name} did it for you`}?`, `With ${name}, it does.`]
   };
-  const features = context.features.split('\n').map(line => line.trim()).filter(Boolean);
-  const steps = [{title:'Go here', sub:''}, ...[...features, `Open ${name}`, 'Pick what you need', 'Get the result', 'Share it'].map(title => ({title, sub:''}))].slice(0, stepCount);
-  return {tone, hook:hooks[tone][0], twist:hooks[tone][1], turn:'But nobody wants to post and just hope it works…', steps, payoff:result ? `I ${result} with ${name}. Like this:` : `Real results with ${name}`, cta:ctaLike(format?.cta.example || '', name)};
+  const features = (context.features || '').split('\n').map(line => line.replace(/^[\s*•-]+/, '').trim()).filter(Boolean);
+  const steps = (features.length ? features : ['Open the app', 'Pick your workout', 'Track your progress', 'Get results']).slice(0, stepCount).map(title => ({
+    title: title.slice(0, 55),
+    sub: ''
+  }));
+  return {tone, hook:hooks[tone]?.[0] || hooks.confession[0], twist:hooks[tone]?.[1] || hooks.confession[1], turn:'Most fitness apps leave you guessing correct form…', steps, payoff:result ? `I ${result} with ${name}. Like this:` : `Real results with ${name}`, cta:ctaLike(format?.cta?.example || '', name)};
 }
 let lookupTimer;
 function lookupShort(node) {
@@ -651,15 +918,36 @@ async function extractFormat(reference, onStage) {
   if (reference.mode === 'prompt') { await step(['Reading your description…', 'Matching it to proven formats…', 'Building the format…']); const format = formatFromPrompt(reference.prompt); return {key, format, message:`Format chosen from your description: ${format.title}`}; }
   const scanned = !KNOWN_FORMATS[key] && (await loadLibrary()).shorts.find(short => short.videoId === key);
   if (scanned) { await step(STAGES.format.slice(-2)); return {key, format:{...scanned.format, source:'library'}, message:'Format loaded from the Library, scanned by Gemini'}; }
-  if (geminiReady) {
-    onStage('Gemini is watching the Short…');
-    const response = await fetch('/api/format', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url:reference.url})});
+  if (!isMockMode()) {
+    const apiKey = getShopApiKey();
+    if (!apiKey && !geminiReady) {
+      console.warn('[PromoFlow] Live mode is active but no ShopAIKey API key found in localStorage.');
+      throw new Error('Mock mode is OFF, but no ShopAIKey API key was found. Enter your key on the home page or turn Mock mode ON.');
+    }
+    const maskedKey = apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : '(none)';
+    console.log(`[PromoFlow] Requesting format extraction via ShopAIKey [Key: ${maskedKey}] for:`, reference.url);
+    onStage(apiKey ? 'Gemini is watching the Short via ShopAIKey…' : 'Gemini is watching the Short…');
+    const start = performance.now();
+    const response = await fetch('/api/format', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: reference.url,
+        apiKey: apiKey || undefined,
+        baseUrl: 'https://api.shopaikey.com/v1beta'
+      })
+    });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || 'Could not extract the format');
-    return {key, format:result, message:'Gemini extracted the format'};
+    const elapsed = Math.round(performance.now() - start);
+    if (!response.ok) {
+      console.error(`[PromoFlow] ShopAIKey format extraction failed (${response.status}) in ${elapsed}ms:`, result.error);
+      throw new Error(result.error || 'Could not extract the format via ShopAIKey');
+    }
+    console.log(`[PromoFlow] ShopAIKey format extraction succeeded in ${elapsed}ms:`, result);
+    return { key, format: result, message: result.source === 'shopaikey' ? 'Format extracted with Gemini via ShopAIKey' : 'Gemini extracted the format' };
   }
   await step(STAGES.format);
-  if (KNOWN_FORMATS[key]) return {key, format:{...KNOWN_FORMATS[key], source:'annotated', videoId:key}, message:'Format loaded: annotated by hand from this Short'};
+  if (KNOWN_FORMATS[key]) return {key, format:{...KNOWN_FORMATS[key], source:'annotated', videoId:key}, message:'Format loaded: annotated by hand from this Short (Mock mode)'};
   const pick = FORMAT_LIBRARY.at([...key].reduce((sum, char) => sum + char.charCodeAt(0), 0) % FORMAT_LIBRARY.length);
   return {key, format:{...pick, source:'mock', videoId:key}, message:`Format extracted (mock): ${pick.title}`};
 }
@@ -675,7 +963,7 @@ async function runFormat(node, quiet = false) {
 }
 
 // ---------- Workflow planner ----------
-const FORMAT_SOURCE = {gemini:'Extracted by Gemini', library:'Scanned by Gemini · Library', annotated:'Annotated by hand', mock:'Mock result', described:'Picked from your description', preset:'Preset format'};
+const FORMAT_SOURCE = {gemini:'Extracted by Gemini', shopaikey:'Extracted via ShopAIKey (Gemini)', library:'Scanned by Gemini · Library', annotated:'Annotated by hand', mock:'Mock result', described:'Picked from your description', preset:'Preset format'};
 // The blocks a format needs, each with the reason. Deterministic: same format, same graph.
 function planWorkflow(format) {
   const count = kind => format.beats.filter(beat => beat.kind === kind).length;
@@ -712,7 +1000,7 @@ function shotList(format, script) {
     results.length && {slot:'shots', title:'Screenshots', note:'Real numbers only', items:results}
   ].filter(Boolean);
 }
-const shotDone = slot => { const node = state.nodes.find(item => item.type === slot); return slot === 'hookclip' ? !!node?.mediaId : slot === 'demo' ? !!node?.mediaId : !!node?.shots?.length; };
+const shotDone = slot => { const node = state.nodes.find(item => item.type === slot); return slot === 'hookclip' ? !!hookMedia(node) : slot === 'demo' ? !!node?.mediaId : !!node?.shots?.length; };
 function projectFromPlan({reference, context, format, key}) {
   const project = starterProject(), keep = new Set(planWorkflow(format).map(block => block.type));
   project.nodes = project.nodes.filter(node => keep.has(node.type));
@@ -729,7 +1017,7 @@ function renderShotList() {
   const groups = state.shotList || [];
   panel.hidden = !groups.length;
   panel.innerHTML = groups.length ? `<div class="section-title"><span>SHOT LIST</span><span>${groups.filter(group => shotDone(group.slot)).length}/${groups.length}</span></div>${groups.map(group => `<button class="shot-group ${shotDone(group.slot) ? 'done' : ''}" data-shot-slot="${group.slot}"><span class="shot-check">${shotDone(group.slot) ? '✓' : '○'}</span><span><strong>${escapeHTML(group.title)}</strong><small>${escapeHTML(group.note)}</small>${group.items.map(item => `<em>${escapeHTML(item)}</em>`).join('')}</span></button>`).join('')}` : '';
-  panel.querySelectorAll('[data-shot-slot]').forEach(button => button.onclick = () => { const node = state.nodes.find(item => item.type === button.dataset.shotSlot); if (node) { if (node.type === 'hookclip' && node.mode !== 'upload') node.mode = 'upload'; selectNode(node.id); } });
+  panel.querySelectorAll('[data-shot-slot]').forEach(button => button.onclick = () => { const node = state.nodes.find(item => item.type === button.dataset.shotSlot); if (node) { selectNode(node.id); } });
 }
 function shortsMetadata(composer) {
   const reel = composeReel(composer), script = [source(composer, 'hook'), source(composer, 'segments')].map(scriptOf).find(Boolean), context = source(script, 'context');
@@ -748,10 +1036,181 @@ async function uploadShort(node) {
     node.uploaded = true; toast('Mock upload complete — nothing was posted');
   } finally { stageText.delete(node.id); busy.delete(node.id); renderCanvas(); renderInspector(); save(); }
 }
-function generateScript(node) {
+async function generateScript(node) {
   const context = source(node, 'context');
   if (!context?.appName) { toast('Connect a Product context with a product name first'); return; }
-  return runMock(node, () => { Object.assign(node, mockScript(context, node), {basedOn:scriptKey(node)}); }, formatOf(node) ? 'Script written in the reference format' : 'Mock script written — edit any line');
+  busy.add(node.id); renderCanvas(); renderInspector();
+  try {
+    const currentKey = scriptKey(node);
+    if (!isMockMode()) {
+      const apiKey = getShopApiKey();
+      if (apiKey || geminiReady) {
+        stageText.set(node.id, 'Writing AI script with Gemini…');
+        renderCanvas();
+        try {
+          const res = await fetch('/api/script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              context: {
+                appName: context.appName,
+                description: context.description,
+                audience: context.audience,
+                pain: context.pain,
+                result: context.result,
+                features: context.features
+              },
+              format: formatOf(node),
+              tone: node.tone,
+              apiKey: apiKey || undefined,
+              baseUrl: 'https://api.shopaikey.com/v1beta'
+            })
+          });
+          if (res.ok) {
+            const aiScript = await res.json();
+            Object.assign(node, aiScript, { basedOn: currentKey });
+            toast(`AI script generated via ${aiScript.source === 'shopaikey' ? 'ShopAIKey (Gemini)' : 'Gemini'}`);
+            return;
+          }
+        } catch (err) {
+          console.warn('[PromoFlow] Live script rewrite error, falling back:', err);
+        }
+      }
+    }
+    await mockStages(node, STAGES.script);
+    Object.assign(node, mockScript(context, node), { basedOn: currentKey });
+    toast(formatOf(node) ? 'Script written in the reference format' : 'Mock script written — edit any line');
+  } finally {
+    stageText.delete(node.id);
+    busy.delete(node.id);
+    renderCanvas();
+    renderInspector();
+    save();
+  }
+}
+
+function defaultHookPrompt(node) {
+  const script = scriptOf(node);
+  const hook = (script?.hook || 'I used to struggle with this').replace(/[“”"]/g, '').trim();
+  return `A vertical 9:16 UGC video of a relatable, energetic creator looking directly at the smartphone camera in a modern bright room, speaking with genuine expression and energy: “${hook}”. Authentic selfie camera angle, clean natural lighting, crisp 4k detail, no on-screen text or logos.`;
+}
+
+async function generateHookClip(node) {
+  const script = scriptOf(node);
+  if (!script || !script.hook) {
+    toast('Connect a Script writer with a hook line first');
+    return;
+  }
+  if (!node.prompt) node.prompt = defaultHookPrompt(node);
+
+  busy.add(node.id);
+  renderCanvas();
+  renderInspector();
+  try {
+    if (!isMockMode()) {
+      const apiKey = getShopApiKey();
+      if (!apiKey && !geminiReady) {
+        throw new Error('Mock mode is OFF, but no ShopAIKey API key was found. Enter your key on the home page or turn Mock mode ON.');
+      }
+      stageText.set(node.id, 'Submitting hook clip to Veo 3.1…');
+      renderCanvas();
+      renderInspector();
+
+      const startRes = await fetch('/api/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: node.prompt,
+          duration: node.duration || 4,
+          apiKey: apiKey || undefined,
+          baseUrl: 'https://api.shopaikey.com/v1beta'
+        })
+      });
+      const startData = await startRes.json().catch(() => null);
+      if (!startRes.ok || !startData?.operation) {
+        throw new Error(startData?.error || 'Failed to start video generation');
+      }
+
+      const operation = startData.operation;
+      console.log('[PromoFlow] Veo generation task started:', operation);
+      stageText.set(node.id, 'Veo 3.1 generating vertical hook…');
+      renderCanvas();
+      renderInspector();
+
+      const startTime = Date.now();
+      let videoUri = null;
+      while (Date.now() - startTime < 360000) {
+        await pause(4000);
+        const statusRes = await fetch('/api/video-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operation,
+            apiKey: apiKey || undefined,
+            baseUrl: 'https://api.shopaikey.com/v1beta'
+          })
+        });
+        const statusData = await statusRes.json().catch(() => null);
+        if (!statusRes.ok) {
+          throw new Error(statusData?.error || 'Video status check failed');
+        }
+        if (statusData.done && statusData.uri) {
+          videoUri = statusData.uri;
+          break;
+        }
+        const elapsedSec = Math.round((Date.now() - startTime) / 1000);
+        const progressLabel = statusData.progress ? `${statusData.progress} · ${elapsedSec}s` : `${elapsedSec}s`;
+        stageText.set(node.id, `Veo 3.1 generating… ${progressLabel}`);
+        renderCanvas();
+        renderInspector();
+      }
+
+      if (!videoUri) throw new Error('Video generation timed out after 6 minutes');
+
+      stageText.set(node.id, 'Downloading generated clip…');
+      renderCanvas();
+      renderInspector();
+
+      let blob;
+      try {
+        const direct = await fetch(videoUri);
+        if (direct.ok) blob = await direct.blob();
+      } catch {
+        // Fallback to proxy
+      }
+      if (!blob) {
+        const proxied = await fetch('/api/video-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uri: videoUri, apiKey: apiKey || undefined })
+        });
+        if (!proxied.ok) throw new Error('Could not download generated video file');
+        blob = await proxied.blob();
+      }
+
+      const file = new File([blob], 'veo-hook-clip.mp4', { type: 'video/mp4' });
+      node.mediaId = await storeMedia(file);
+      node.mediaType = 'video';
+      node.mediaName = 'veo-hook-clip.mp4';
+      node.generated = true;
+      toast('✦ AI hook video generated with Veo 3.1!');
+      return;
+    }
+
+    // Mock Mode
+    await mockStages(node, STAGES.hookclip);
+    node.generated = true;
+    toast('Simulated creator reaction ready (Mock mode ON)');
+  } catch (err) {
+    console.error('[PromoFlow] Generate hook error:', err);
+    toast(err.message || 'Could not generate hook clip');
+  } finally {
+    stageText.delete(node.id);
+    busy.delete(node.id);
+    renderCanvas();
+    renderInspector();
+    save();
+  }
 }
 
 // ---------- Rendering (shared by preview and export) ----------
@@ -812,9 +1271,14 @@ function paintScene(ctx, scene, t, app, videos) {
     // The twist sits under the hook's last line, however many lines the hook wraps to.
     const after = drawCaption(ctx, scene.title, 545, scene.color === 'yellow' ? '#f5e83d' : '#fff', 40, 3, held ? 1 : pop, held ? 1 : scale);
     drawCaption(ctx, scene.sub, Math.max(640, after + 14), '#fff', 25, 2, held ? 1 : clamp((t - 1.1) / .2, 0, 1));
-  } else if (scene.kind === 'turn') drawCaption(ctx, scene.title, 545, scene.color === 'yellow' ? '#f5e83d' : '#fff', 40, 3, pop, scale);
-  else if (scene.kind === 'step') { drawCaption(ctx, scene.title, 380, scene.color === 'white' ? '#fff' : '#f5e83d', 36, 2, pop, scale); drawCaption(ctx, scene.sub, 640, '#fff', 25, 2, clamp((t - .35) / .2, 0, 1)); }
-  else if (scene.kind === 'payoff') drawCaption(ctx, scene.title, 500, '#fff', 32, 4, pop, scale);
+  } else if (scene.kind === 'turn') {
+    drawCaption(ctx, scene.title, 480, scene.color === 'yellow' ? '#f5e83d' : '#fff', 38, 3, pop, scale);
+  } else if (scene.kind === 'step') {
+    const after = drawCaption(ctx, scene.title, 320, scene.color === 'white' ? '#fff' : '#f5e83d', 36, 2, pop, scale);
+    if (scene.sub) drawCaption(ctx, scene.sub, Math.max(390, after + 12), '#fff', 24, 2, clamp((t - .35) / .2, 0, 1));
+  } else if (scene.kind === 'payoff') {
+    drawCaption(ctx, scene.title, 480, '#fff', 34, 4, pop, scale);
+  }
   else {
     const after = drawCaption(ctx, scene.title, 400, '#fff', 38, 4, pop, scale);
     ctx.font = '900 24px Arial'; const pill = ctx.measureText(scene.sub).width + 48;
@@ -934,6 +1398,7 @@ function route() {
   if (view === 'home') $('#continueBtn').hidden = isBlank();
   if (view === 'library') renderLibrary(); else stopReels();
   if (view === 'start') renderPicked();
+  syncApiConfigUI();
   window.scrollTo(0, 0);
 }
 function setStartMode(mode) {
@@ -1172,8 +1637,125 @@ $('#videoModal').addEventListener('click', event => { if (event.target.id === 'v
 document.querySelectorAll('[data-start-mode]').forEach(button => button.onclick = () => setStartMode(button.dataset.startMode));
 document.querySelectorAll('[data-prompt]').forEach(button => button.onclick = () => { $('#startPrompt').value = button.dataset.prompt; });
 $('#analyzeBtn').onclick = analyze;
+function syncApiConfigUI() {
+  const mockOn = isMockMode();
+  const key = getShopApiKey();
+  const hasKey = key.length > 0;
+
+  const mockToggle = $('#mockModeToggle');
+  if (mockToggle) mockToggle.checked = mockOn;
+
+  const toggleStateText = $('#mockToggleStateText');
+  if (toggleStateText) {
+    toggleStateText.textContent = mockOn ? 'Mock mode: ON' : 'Mock mode: OFF (Live AI)';
+    toggleStateText.classList.toggle('live', !mockOn);
+  }
+
+  const mockDesc = $('#mockModeDesc');
+  if (mockDesc) {
+    if (mockOn) {
+      mockDesc.innerHTML = '<strong>Mock Mode is ON:</strong> Uses built-in format presets &amp; demo outputs (free offline mode, zero API costs).';
+    } else if (hasKey) {
+      mockDesc.innerHTML = '<strong>Live AI Mode active:</strong> Connected to ShopAIKey (<code>https://api.shopaikey.com</code>). Ready to analyze real YouTube Shorts with Gemini.';
+    } else {
+      mockDesc.innerHTML = '<strong>Live AI Mode enabled:</strong> Please paste and save your ShopAIKey API key below to process live videos.';
+    }
+  }
+
+  const dot = $('#apiStatusDot');
+  if (dot) {
+    dot.className = 'status-indicator-dot';
+    if (!mockOn) dot.classList.add(hasKey ? 'live' : 'warn');
+  }
+
+  const card = $('#apiConfigCard');
+  if (card) card.classList.toggle('live-active', !mockOn && hasKey);
+
+  const keyInput = $('#shopApiKeyInput');
+  if (keyInput && document.activeElement !== keyInput) keyInput.value = key;
+
+  const statusMsg = $('#apiKeyStatusMsg');
+  if (statusMsg) {
+    if (hasKey) {
+      const masked = key.length > 8 ? `${key.slice(0, 4)}••••${key.slice(-4)}` : '••••••••';
+      statusMsg.innerHTML = `<span class="api-key-status-msg success">✓ Key saved (${escapeHTML(masked)}). Active for live requests.</span>`;
+    } else {
+      statusMsg.innerHTML = '<span class="api-key-status-msg">Key is stored in your browser and used when Mock Mode is OFF.</span>';
+    }
+  }
+
+  const studioToggle = $('#studioMockToggle');
+  if (studioToggle) studioToggle.checked = mockOn;
+
+  const studioTitle = $('#studioMockTitle');
+  if (studioTitle) studioTitle.textContent = mockOn ? 'MOCK MODE' : 'LIVE AI MODE';
+
+  const studioDesc = $('#studioMockDesc');
+  if (studioDesc) {
+    if (mockOn) {
+      studioDesc.textContent = 'Mock mode is ON: Format extractor and other blocks use built-in presets and demo outputs.';
+    } else if (hasKey) {
+      studioDesc.textContent = 'Live mode is ON: The Format extractor connects to ShopAIKey with Gemini.';
+    } else {
+      studioDesc.textContent = 'Live mode is ON, but no key is saved. Please enter your key on the home page.';
+    }
+  }
+
+  const geminiStatus = $('#geminiStatus');
+  if (geminiStatus) {
+    if (mockOn) {
+      geminiStatus.textContent = 'Mock mode: using presets (offline).';
+    } else if (hasKey) {
+      geminiStatus.textContent = 'ShopAIKey connected — watching real Shorts.';
+    } else if (geminiReady) {
+      geminiStatus.textContent = 'Server Gemini connected.';
+    } else {
+      geminiStatus.textContent = 'ShopAIKey missing — add key on home page.';
+    }
+  }
+}
+
+$('#mockModeToggle')?.addEventListener('change', event => {
+  setMockMode(event.target.checked);
+  toast(event.target.checked ? 'Mock mode enabled — using built-in presets' : (hasShopApiKey() ? 'Live mode enabled — using ShopAIKey' : 'Live mode enabled — please enter your ShopAIKey'));
+});
+
+$('#studioMockToggle')?.addEventListener('change', event => {
+  setMockMode(event.target.checked);
+  toast(event.target.checked ? 'Mock mode enabled' : (hasShopApiKey() ? 'Live mode enabled' : 'Please enter ShopAIKey on home page'));
+});
+
+$('#saveApiKeyBtn')?.addEventListener('click', () => {
+  const val = ($('#shopApiKeyInput')?.value || '').trim();
+  setShopApiKey(val);
+  toast(val ? 'ShopAIKey saved!' : 'ShopAIKey cleared');
+});
+
+$('#shopApiKeyInput')?.addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    const val = (event.target.value || '').trim();
+    setShopApiKey(val);
+    toast(val ? 'ShopAIKey saved!' : 'ShopAIKey cleared');
+  }
+});
+
+$('#toggleKeyVisibility')?.addEventListener('click', () => {
+  const input = $('#shopApiKeyInput');
+  if (input) {
+    input.type = input.type === 'password' ? 'text' : 'password';
+    $('#toggleKeyVisibility').textContent = input.type === 'password' ? '👁' : '🔒';
+  }
+});
+
 window.addEventListener('hashchange', route);
 renderLandingBeats(); route();
 renderCanvas(); renderInspector();
-fetch('/api/health').then(response => response.json()).then(health => { geminiReady = !!health.geminiConfigured; $('#geminiStatus').textContent = geminiReady ? 'Gemini connected — the Format extractor watches real Shorts.' : 'Gemini not configured — the Format extractor uses the preset (mock).'; renderCanvas(); }).catch(() => {});
+fetch('/api/health').then(response => response.json()).then(health => {
+  geminiReady = !!health.geminiConfigured;
+  syncApiConfigUI();
+  renderCanvas();
+}).catch(() => {
+  syncApiConfigUI();
+});
 hydrateMedia().catch(error => { console.error(error); toast('Saved media is unavailable in this browser'); });
+syncApiConfigUI();

@@ -86,3 +86,46 @@ a.button{text-decoration:none;display:inline-flex;align-items:center;gap:6px}
   .site-nav,.hero,.how,.beats-section,.start-main,.site-footer{padding-left:16px;padding-right:16px}
   .beat-strip strong{font-size:11px}
 }
+
+/* API & Mock Mode Configuration Card */
+.api-config-card{margin:28px 0 10px;background:#181b22;border:1px solid #2d323b;border-radius:16px;padding:18px 20px;max-width:580px;transition:border-color .2s}
+.api-config-card:hover{border-color:#3b424e}
+.api-config-card.live-active{border-color:rgba(197,243,106,.4);box-shadow:0 4px 20px rgba(197,243,106,.08)}
+.api-config-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.api-config-title{display:flex;align-items:center;gap:8px;font-size:13px;color:#e4e7ea}
+.status-indicator-dot{width:8px;height:8px;border-radius:50%;background:#f0a868;display:inline-block;box-shadow:0 0 8px #f0a86888;transition:background .2s}
+.status-indicator-dot.live{background:#c5f36a;box-shadow:0 0 8px #c5f36a88}
+.status-indicator-dot.warn{background:#ff6b6b;box-shadow:0 0 8px #ff6b6b88}
+.mock-toggle-container{display:flex;align-items:center;gap:10px}
+.mock-toggle-label{font-size:12px;font-weight:700;color:#f0a868;transition:color .2s}
+.mock-toggle-label.live{color:#c5f36a}
+.switch-toggle{position:relative;display:inline-block;width:44px;height:24px;flex:none;cursor:pointer}
+.switch-toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background-color:#2b3a1a;border:1px solid #4b662d;border-radius:24px;transition:.25s}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:2px;bottom:2px;background-color:#e4e7ea;border-radius:50%;transition:.25s}
+.switch-toggle input:checked+.toggle-slider{background-color:#d97706;border-color:#f59e0b}
+.switch-toggle input:checked+.toggle-slider:before{transform:translateX(20px);background-color:#fff}
+.api-config-desc{font-size:13px;color:#9aa1a9;line-height:1.5;margin:10px 0 14px}
+.api-key-field-group{border-top:1px solid #282d36;padding-top:12px}
+.api-key-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.api-key-label-row label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#aeb3b9}
+.key-help-link{font-size:11px;color:#c5f36a;text-decoration:none}
+.key-help-link:hover{text-decoration:underline}
+.api-key-input-wrapper{display:flex;gap:8px;align-items:center}
+.api-key-input-wrapper input{flex:1;background:#101217;border:1px solid #363b45;border-radius:8px;color:#f1f2ed;padding:9px 12px;font-size:13px;outline:0;font-family:monospace}
+.api-key-input-wrapper input:focus{border-color:#c5f36a}
+.btn-toggle-eye{background:#242831;border:1px solid #363b45;color:#9da3ad;border-radius:8px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;flex:none}
+.btn-toggle-eye:hover{color:#fff;border-color:#4a5260}
+.btn-save-key{padding:8px 14px;font-size:12px;font-weight:700;flex:none}
+.api-key-status-msg{font-size:11px;color:#7f8690;margin-top:6px}
+.api-key-status-msg.success{color:#c5f36a}
+.api-key-status-msg.warn{color:#f0a868}
+
+/* Small toggle in Studio sidebar */
+.switch-toggle-sm{position:relative;display:inline-block;width:32px;height:18px;flex:none;cursor:pointer}
+.switch-toggle-sm input{opacity:0;width:0;height:0}
+.toggle-slider-sm{position:absolute;inset:0;background-color:#2b3a1a;border:1px solid #4b662d;border-radius:18px;transition:.25s}
+.toggle-slider-sm:before{position:absolute;content:"";height:12px;width:12px;left:2px;bottom:2px;background-color:#e4e7ea;border-radius:50%;transition:.25s}
+.switch-toggle-sm input:checked+.toggle-slider-sm{background-color:#d97706;border-color:#f59e0b}
+.switch-toggle-sm input:checked+.toggle-slider-sm:before{transform:translateX(14px);background-color:#fff}
+
