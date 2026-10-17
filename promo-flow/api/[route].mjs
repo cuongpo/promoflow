@@ -1,3 +1,4 @@
+import '../env.mjs';
 import { handleApi } from '../api-routes.mjs';
 
 export default async function handler(request, response) {

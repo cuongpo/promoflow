@@ -1,5 +1,7 @@
-// GEMINI_BASE_URL points the Gemini calls at a compatible proxy; Google's endpoint by default.
-const API = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta';
+import './env.mjs';
+
+// ShopAIKey Gemini-compatible endpoint
+const API = process.env.SHOPAI_BASE_URL || 'https://api.shopaikey.com/v1';
 const hookSchema = {
   type: 'object',
   properties: {
@@ -50,7 +52,41 @@ export const clean = (text, max) => {
   return `${piece.slice(0, wordEnd > max * .6 ? wordEnd : max - 1).replace(/[.,;: ]+$/, '')}…`;
 };
 const headline = (text, fallback) => clean(text || fallback, 72).replace(/[.!?]+$/, '');
-const apiKeyFrom = apiKey => (typeof apiKey === 'string' && apiKey.slice(0, 300)) || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+
+export const apiKeyFrom = apiKey =>
+  (typeof apiKey === 'string' && apiKey.trim().slice(0, 300)) ||
+  process.env.SHOPAI_API_KEY ||
+  '';
+
+export function isShopAI() {
+  return true;
+}
+
+export function getBaseUrl(first, second) {
+  const customBase = typeof first === 'string' ? first : (typeof second === 'string' ? second : null);
+  if (customBase && !customBase.includes('googleapis.com')) return customBase.replace(/\/v1beta\/?$/, '/v1');
+  if (process.env.SHOPAI_BASE_URL) return process.env.SHOPAI_BASE_URL.replace(/\/v1beta\/?$/, '/v1');
+  return 'https://api.shopaikey.com/v1';
+}
+
+export function getModelForStep(step) {
+  const defaultModel = process.env.SHOPAI_MODEL || 'gemini-2.5-flash';
+
+  switch (step) {
+    case 'format':
+      return process.env.FORMAT_MODEL || defaultModel;
+    case 'script':
+      return process.env.SCRIPT_MODEL || defaultModel;
+    case 'hooks':
+      return process.env.HOOKS_MODEL || process.env.HOOK_MODEL || defaultModel;
+    case 'video':
+      return process.env.VEO_MODEL || process.env.VIDEO_MODEL || 'veo3.1-fast';
+    case 'library':
+      return process.env.LIBRARY_MODEL || process.env.FORMAT_MODEL || defaultModel;
+    default:
+      return process.env.SHOPAI_MODEL || 'gemini-2.5-flash';
+  }
+}
 
 export function siteContext(site) {
   return {
@@ -95,11 +131,13 @@ const log = (tag, ...args) => console.log(`[${new Date().toISOString()}] [${tag}
 const logErr = (tag, ...args) => console.error(`[${new Date().toISOString()}] [${tag}]`, ...args);
 
 export async function gemini(path, key, body, timeout, customBase) {
-  const isShopAI = (customBase && customBase.includes('shopaikey')) || (key && !key.startsWith('AIza'));
-  const provider = isShopAI ? 'ShopAIKey' : 'Google Gemini';
-  const base = customBase || process.env.GEMINI_BASE_URL || (isShopAI ? 'https://api.shopaikey.com/v1beta' : 'https://generativelanguage.googleapis.com/v1beta');
-  const headers = { 'Content-Type': 'application/json', 'x-goog-api-key': key };
-  if (key) headers['Authorization'] = `Bearer ${key}`;
+  const provider = 'ShopAIKey';
+  const base = getBaseUrl(customBase);
+  const headers = { 'Content-Type': 'application/json' };
+  if (key) {
+    headers['Authorization'] = `Bearer ${key}`;
+    headers['x-goog-api-key'] = key;
+  }
 
   const start = Date.now();
   log(provider, `-> POST ${base}/${path} | Key: ${maskKey(key)}`);
@@ -115,42 +153,54 @@ export async function gemini(path, key, body, timeout, customBase) {
     const result = await response.json();
     if (!response.ok) {
       logErr(provider, `<- FAIL (${response.status}) in ${duration}ms:`, result.error?.message || result.message || 'Unknown error');
-      throw new Error(`API request failed (${response.status}): ${clean(result.error?.message || result.message, 180) || 'Check the API key and model'}`);
+      throw new Error(`ShopAIKey request failed (${response.status}): ${clean(result.error?.message || result.message, 180) || 'Check SHOPAI_API_KEY and model'}`);
     }
     log(provider, `<- OK (${response.status}) in ${duration}ms`);
     return result;
   } catch (err) {
-    if (!err.message?.startsWith('API request failed')) {
+    if (!err.message?.startsWith('ShopAIKey request failed')) {
       logErr(provider, `<- Network/Timeout error in ${Date.now() - start}ms:`, err.message);
     }
     throw err;
   }
 }
 
+export function parseModelJson(rawText) {
+  const text = String(rawText || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  try {
+    return JSON.parse(text);
+  } catch {
+    const match = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (match) {
+      try { return JSON.parse(match[1]); } catch {}
+    }
+    throw new Error('Unreadable JSON received from model');
+  }
+}
+
 export async function generateHooks(context, { style, apiKey, baseUrl }) {
   const key = apiKeyFrom(apiKey);
   if (!key) return { hooks: fallbackHooks(context), source: 'template' };
-  const isShopAI = (baseUrl && baseUrl.includes('shopaikey')) || (key && !key.startsWith('AIza'));
-  const model = process.env.GEMINI_MODEL || (isShopAI ? 'gemini-3-flash-preview' : 'gemini-3.6-flash');
-  log(isShopAI ? 'ShopAIKey:Hooks' : 'Gemini:Hooks', `Generating hooks with model: ${model} | Style: ${style || 'problem'} | Key: ${maskKey(key)}`);
-  const prompt = `Write 4 alternative opening hooks for a 9:16 social video ad. A hook is the on-screen caption shown in the first 3 seconds; it must stop the scroll and be readable in under 2 seconds (max 8 words). Each hook also gets an optional short subtitle (max 10 words, may be empty). Angle: ${styles[style] || styles.problem}. Use ONLY facts in the product context. Do not invent metrics, testimonials, customers, pricing, or features. English only.\n\n${contextText(context)}`;
+  const model = getModelForStep('hooks');
+  log('ShopAIKey:Hooks', `Generating hooks with model: ${model} | Style: ${style || 'problem'} | Key: ${maskKey(key)}`);
+  const prompt = `Write 4 alternative opening hooks for a 9:16 social video ad. A hook is the on-screen caption shown in the first 3 seconds; it must stop the scroll and be readable in under 2 seconds (max 8 words). Each hook also gets an optional short subtitle (max 10 words, may be empty). Angle: ${styles[style] || styles.problem}. Use ONLY facts in the product context. Do not invent metrics, testimonials, customers, pricing, or features. Return valid JSON only with format: {"hooks": [{"text": "...", "sub": "..."}]}. English only.\n\n${contextText(context)}`;
   const result = await gemini(`models/${encodeURIComponent(model)}:generateContent`, key, {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { responseFormat: { text: { mimeType: 'application/json', schema: hookSchema } } }
+    generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
   }, 45000, baseUrl);
-  const text = result.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
-  const hooks = (JSON.parse(text || '{}').hooks || []).map(hook => ({ text: clean(hook.text, 70), sub: clean(hook.sub, 80) })).filter(hook => hook.text).slice(0, 4);
-  if (!hooks.length) throw new Error('Gemini returned no hooks');
-  log(isShopAI ? 'ShopAIKey:Hooks' : 'Gemini:Hooks', `Generated ${hooks.length} hooks successfully.`);
-  return { hooks, source: isShopAI ? 'shopaikey' : 'gemini', model };
+  const text = result.candidates?.[0]?.content?.parts?.filter(part => !part.thought).map(part => part.text || '').join('') || '';
+  const parsed = parseModelJson(text);
+  const hooks = (parsed.hooks || []).map(hook => ({ text: clean(hook.text, 70), sub: clean(hook.sub, 80) })).filter(hook => hook.text).slice(0, 4);
+  if (!hooks.length) throw new Error('ShopAIKey returned no hooks');
+  log('ShopAIKey:Hooks', `Generated ${hooks.length} hooks successfully.`);
+  return { hooks, source: 'shopaikey', model };
 }
 
 export async function generateFullScript(context, { format, tone, apiKey, baseUrl }) {
   const key = apiKeyFrom(apiKey);
   if (!key) return null;
-  const isShopAI = (baseUrl && baseUrl.includes('shopaikey')) || (key && !key.startsWith('AIza'));
-  const model = process.env.GEMINI_MODEL || (isShopAI ? 'gemini-3-flash-preview' : 'gemini-3.6-flash');
-  log(isShopAI ? 'ShopAIKey:Script' : 'Gemini:Script', `Generating full script with model: ${model} for app: ${context.appName || 'app'} | Tone: ${tone || 'confession'}`);
+  const model = getModelForStep('script');
+  log('ShopAIKey:Script', `Generating full script with model: ${model} for app: ${context.appName || 'app'} | Tone: ${tone || 'confession'}`);
 
   const stepCount = format ? Math.max(3, Math.min(5, (format.beats || []).filter(b => b.kind === 'step').length || 3)) : 4;
   const prompt = `You are an elite short-form video copywriter for TikTok and YouTube Shorts.
@@ -163,7 +213,7 @@ Turn line: optional line raising an objection or turning point (max 12 words).
 Steps: ${stepCount} actionable steps showing how to use the app or what the user sees (title max 7 words, sub max 10 words).
 Payoff line: proof or final result (max 10 words).
 CTA line: clear call to action (max 8 words).
-Use ONLY facts from the product information. Do not invent fake testimonials, pricing, or numbers. English only.
+Use ONLY facts from the product information. Do not invent fake testimonials, pricing, or numbers. Return valid JSON only with format: {"hook": "...", "twist": "...", "turn": "...", "steps": [{"title": "...", "sub": "..."}], "payoff": "...", "cta": "..."}. English only.
 
 Product Information:
 ${contextText(context)}
@@ -171,13 +221,13 @@ ${context.features ? `Features:\n${context.features}` : ''}`;
 
   const result = await gemini(`models/${encodeURIComponent(model)}:generateContent`, key, {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { responseFormat: { text: { mimeType: 'application/json', schema: scriptSchema } }, temperature: 0.3 }
+    generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
   }, 45000, baseUrl);
 
-  const text = result.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
+  const text = result.candidates?.[0]?.content?.parts?.filter(part => !part.thought).map(part => part.text || '').join('') || '';
   let parsed = {};
-  try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned unreadable script JSON'); }
-  log(isShopAI ? 'ShopAIKey:Script' : 'Gemini:Script', `Generated script: "${parsed.hook}" with ${parsed.steps?.length || 0} steps.`);
+  try { parsed = parseModelJson(text); } catch { throw new Error('ShopAIKey returned unreadable script JSON'); }
+  log('ShopAIKey:Script', `Generated script: "${parsed.hook}" with ${parsed.steps?.length || 0} steps.`);
   return {
     tone: tone || 'confession',
     hook: clean(parsed.hook, 70),
@@ -189,103 +239,79 @@ ${context.features ? `Features:\n${context.features}` : ''}`;
     })),
     payoff: clean(parsed.payoff, 80) || `Real results with ${context.appName || 'this app'}`,
     cta: clean(parsed.cta, 80) || `Try ${context.appName || 'this app'} free`,
-    source: isShopAI ? 'shopaikey' : 'gemini',
+    source: 'shopaikey',
     model
   };
 }
 
-const OPERATION = /^models\/[\w.-]+\/operations\/[\w-]+$/;
-const FILE_HOST = 'https://generativelanguage.googleapis.com/';
-
 export async function startVideo({ prompt, image, duration, apiKey, baseUrl }) {
   const key = apiKeyFrom(apiKey);
-  if (!key) throw new Error('Video generation needs an API key. Upload a clip or use an app screen instead.');
+  if (!key) throw new Error('Video generation needs SHOPAI_API_KEY. Set it in .env or provide it in the request.');
   if (!String(prompt || '').trim()) throw new Error('Write a video prompt first');
 
-  const isShopAI = (baseUrl && baseUrl.includes('shopaikey')) || (key && !key.startsWith('AIza'));
-  if (isShopAI) {
-    const shopBase = (baseUrl || 'https://api.shopaikey.com').replace(/\/v1beta\/?$/, '');
-    const payload = {
-      model: process.env.VEO_MODEL || 'veo3.1-fast',
-      prompt: `${clean(prompt, 1500)}\nVertical 9:16 framing. Do not render any on-screen text, captions, logos, or watermarks; a caption is added later.`,
-      metadata: {
-        aspect_ratio: '9:16',
-        enhance_prompt: true,
-        enable_upsample: true
-      }
-    };
-    if (image) payload.metadata.images = [typeof image === 'string' && image.startsWith('http') ? image : `data:image/jpeg;base64,${image}`];
-    
-    log('ShopAIKey:Veo', `-> Creating video generation task via ${shopBase}/v1/video/generations | Key: ${maskKey(key)} | Model: ${payload.model}`);
-    const start = Date.now();
-    const response = await fetch(`${shopBase}/v1/video/generations`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const res = await response.json();
-    const elapsed = Date.now() - start;
-    log('ShopAIKey:Veo', `<- Server response (${response.status}) in ${elapsed}ms:`, JSON.stringify(res));
-
-    const taskId = res.data?.task_id || res.task_id || res.data?.id || res.id || (typeof res.data === 'string' && res.data.startsWith('task_') ? res.data : null);
-    if (!response.ok || res.error || (res.code && res.code !== 'success') || !taskId) {
-      const errMsg = res.error?.message || (typeof res.error === 'string' ? res.error : null) || res.message || res.msg || (res.data?.fail_reason) || `Veo video generation failed (${response.status}): ${JSON.stringify(res)}`;
-      logErr('ShopAIKey:Veo', `<- Generation failed (${response.status}) in ${elapsed}ms:`, errMsg);
-      throw new Error(errMsg);
+  const model = getModelForStep('video');
+  const shopBase = getBaseUrl(baseUrl).replace(/\/v1(?:beta)?\/?$/, '');
+  const payload = {
+    model,
+    prompt: `${clean(prompt, 1500)}\nVertical 9:16 framing. Do not render any on-screen text, captions, logos, or watermarks; a caption is added later.`,
+    metadata: {
+      aspect_ratio: '9:16',
+      enhance_prompt: true,
+      enable_upsample: true
     }
-    log('ShopAIKey:Veo', `<- Video task created in ${elapsed}ms | Task ID: ${taskId}`);
-    return { operation: taskId, model: payload.model, provider: 'shopaikey' };
-  }
+  };
+  if (image) payload.metadata.images = [typeof image === 'string' && image.startsWith('http') ? image : `data:image/jpeg;base64,${image}`];
 
-  const model = process.env.VEO_MODEL || 'veo-3.1-fast-generate-preview';
-  log('Gemini:Veo', `-> Creating video generation task with Google Veo: ${model} | Key: ${maskKey(key)}`);
-  const instance = { prompt: `${clean(prompt, 1500)}\nVertical 9:16 framing. Do not render any on-screen text, captions, logos, or watermarks; a caption is added later.` };
-  if (image) instance.image = { inlineData: { mimeType: 'image/jpeg', data: image } };
-  const operation = await gemini(`models/${encodeURIComponent(model)}:predictLongRunning`, key, {
-    instances: [instance],
-    parameters: { aspectRatio: '9:16', durationSeconds: String([4, 6, 8].includes(Number(duration)) ? Number(duration) : 4), personGeneration: image ? 'allow_adult' : 'allow_all' }
-  }, 30000, baseUrl);
-  log('Gemini:Veo', `<- Video operation started: ${operation.name}`);
-  return { operation: operation.name, model };
+  log('ShopAIKey:Veo', `-> Creating video generation task via ${shopBase}/v1/video/generations | Key: ${maskKey(key)} | Model: ${payload.model}`);
+  const start = Date.now();
+  const response = await fetch(`${shopBase}/v1/video/generations`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const res = await response.json();
+  const elapsed = Date.now() - start;
+  log('ShopAIKey:Veo', `<- Server response (${response.status}) in ${elapsed}ms:`, JSON.stringify(res));
+
+  const taskId = res.data?.task_id || res.task_id || res.data?.id || res.id || (typeof res.data === 'string' && res.data.startsWith('task_') ? res.data : null);
+  if (!response.ok || res.error || (res.code && res.code !== 'success') || !taskId) {
+    const errMsg = res.error?.message || (typeof res.error === 'string' ? res.error : null) || res.message || res.msg || (res.data?.fail_reason) || `Veo video generation failed (${response.status}): ${JSON.stringify(res)}`;
+    logErr('ShopAIKey:Veo', `<- Generation failed (${response.status}) in ${elapsed}ms:`, errMsg);
+    throw new Error(errMsg);
+  }
+  log('ShopAIKey:Veo', `<- Video task created in ${elapsed}ms | Task ID: ${taskId}`);
+  return { operation: taskId, model: payload.model, provider: 'shopaikey' };
 }
 
 // Veo runs for minutes, so the client polls this instead of holding one request open.
 export async function videoStatus({ operation, apiKey, baseUrl }) {
   const key = apiKeyFrom(apiKey);
-  if (String(operation || '').startsWith('task_')) {
-    const shopBase = (baseUrl || 'https://api.shopaikey.com').replace(/\/v1beta\/?$/, '');
-    log('ShopAIKey:Veo', `-> Polling task status: ${operation} | Key: ${maskKey(key)}`);
-    const response = await fetch(`${shopBase}/v1/video/generations/${encodeURIComponent(operation)}`, {
-      headers: { 'Authorization': `Bearer ${key}` }
-    });
-    const res = await response.json();
-    log('ShopAIKey:Veo', `<- Poll response status: ${response.status} | Body:`, JSON.stringify(res));
-    if (!response.ok || res.error || (res.code && res.code !== 'success')) {
-      const errMsg = res.error?.message || (typeof res.error === 'string' ? res.error : null) || res.message || res.msg || 'Failed to check video status';
-      logErr('ShopAIKey:Veo', `<- Poll failed (${response.status}):`, errMsg);
-      throw new Error(errMsg);
-    }
-    const data = res.data || res || {};
-    const status = data.status || res.status;
-    log('ShopAIKey:Veo', `<- Task ${operation} status: ${status} | Progress: ${data.progress || 'processing'}`);
-    if (status === 'SUCCESS' || status === 'completed') return { done: true, uri: data.result_url || data.video_url || data.url };
-    if (status === 'FAILURE' || status === 'failed') throw new Error(`Veo generation failed: ${clean(data.fail_reason || data.error, 180) || 'Unknown error'}`);
-    return { done: false, progress: data.progress || 'processing' };
+  if (!key) throw new Error('SHOPAI_API_KEY is not configured');
+  const shopBase = getBaseUrl(baseUrl).replace(/\/v1(?:beta)?\/?$/, '');
+  log('ShopAIKey:Veo', `-> Polling task status: ${operation} | Key: ${maskKey(key)}`);
+  const response = await fetch(`${shopBase}/v1/video/generations/${encodeURIComponent(operation)}`, {
+    headers: { 'Authorization': `Bearer ${key}` }
+  });
+  const res = await response.json();
+  log('ShopAIKey:Veo', `<- Poll response status: ${response.status} | Body:`, JSON.stringify(res));
+  if (!response.ok || res.error || (res.code && res.code !== 'success')) {
+    const errMsg = res.error?.message || (typeof res.error === 'string' ? res.error : null) || res.message || res.msg || 'Failed to check video status';
+    logErr('ShopAIKey:Veo', `<- Poll failed (${response.status}):`, errMsg);
+    throw new Error(errMsg);
   }
-
-  if (!OPERATION.test(String(operation || ''))) throw new Error('Unknown video operation');
-  const status = await gemini(operation, key, null, 20000, baseUrl);
-  if (!status.done) return { done: false };
-  if (status.error) throw new Error(`Gemini video generation failed: ${clean(status.error.message, 180)}`);
-  const uri = status.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
-  if (!uri) throw new Error('Gemini returned no video. The prompt may have been filtered; try rewording it.');
-  return { done: true, uri };
+  const data = res.data || res || {};
+  const status = data.status || res.status;
+  log('ShopAIKey:Veo', `<- Task ${operation} status: ${status} | Progress: ${data.progress || 'processing'}`);
+  if (status === 'SUCCESS' || status === 'completed') return { done: true, uri: data.result_url || data.video_url || data.url };
+  if (status === 'FAILURE' || status === 'failed') throw new Error(`Veo generation failed: ${clean(data.fail_reason || data.error, 180) || 'Unknown error'}`);
+  return { done: false, progress: data.progress || 'processing' };
 }
 
 export async function videoFile({ uri, apiKey }) {
   if (String(uri || '').startsWith('http')) {
     const headers = {};
-    if (String(uri).startsWith(FILE_HOST) && apiKeyFrom(apiKey)) headers['x-goog-api-key'] = apiKeyFrom(apiKey);
+    const key = apiKeyFrom(apiKey);
+    if (key) headers['Authorization'] = `Bearer ${key}`;
     const download = await fetch(uri, { headers, redirect: 'follow', signal: AbortSignal.timeout(60000) });
     if (!download.ok) throw new Error(`Video download failed (${download.status})`);
     return download;
@@ -317,7 +343,7 @@ function normalizeFormat(raw, videoId) {
       note: clean(beat.note, 120)
     };
   });
-  if (!beats.some(beat => beat.kind === 'hook') || !beats.some(beat => beat.kind === 'step')) throw new Error('Gemini could not find a hook and demo steps in this Short. Try one that shows a product step by step.');
+  if (!beats.some(beat => beat.kind === 'hook') || !beats.some(beat => beat.kind === 'step')) throw new Error('Could not find a hook and demo steps in this Short. Try one that shows a product step by step.');
   let totalSec = beats.reduce((sum, b) => sum + b.seconds, 0);
   if (totalSec > 28) {
     const factor = 24 / totalSec;
@@ -331,7 +357,7 @@ function normalizeFormat(raw, videoId) {
     }
   }
   return {
-    source: 'gemini', videoId,
+    source: 'shopaikey', videoId,
     title: clean(raw.title, 90),
     summary: clean(raw.summary, 160),
     hookFormula: clean(raw.hookFormula, 180),
@@ -346,10 +372,9 @@ export async function extractFormat({ url, apiKey, baseUrl }) {
   const videoId = youtubeId(url);
   if (!videoId) throw new Error('Paste a public YouTube Shorts URL');
   const key = apiKeyFrom(apiKey);
-  if (!key) throw new Error('API key is not configured');
-  const isShopAI = (baseUrl && baseUrl.includes('shopaikey')) || (key && !key.startsWith('AIza'));
-  const model = process.env.GEMINI_MODEL || (isShopAI ? 'gemini-3-flash-preview' : 'gemini-3.8-flash');
-  const tag = isShopAI ? 'ShopAIKey:Format' : 'Gemini:Format';
+  if (!key) throw new Error('SHOPAI_API_KEY is not configured');
+  const model = getModelForStep('format');
+  const tag = 'ShopAIKey:Format';
   log(tag, `-> Extracting format for video ${videoId} with model ${model} | Key: ${maskKey(key)}`);
   const prompt = `You are a short-form video editor. Watch this YouTube Short and describe its reusable FORMAT (structure, not content) so the same format can be rebuilt for a different product.
 Return only JSON with this shape:
@@ -371,7 +396,7 @@ List beats in order with their real durations, optimized for high-retention shor
   }
   const normalized = normalizeFormat(raw, videoId);
   log(tag, `<- Format extracted successfully: "${normalized.title}" (${normalized.beats.length} beats)`);
-  return { ...normalized, source: isShopAI ? 'shopaikey' : 'gemini', model };
+  return { ...normalized, source: 'shopaikey', model };
 }
 
 // Public title and channel for a Short, from YouTube's oEmbed endpoint (no key needed).

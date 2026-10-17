@@ -160,6 +160,9 @@ async function mockStages(node, stages) {
   stageText.delete(node.id);
 }
 let geminiReady = false;
+let serverShopAi = false;
+let serverModels = null;
+let serverProvider = null;
 
 const mediaUrls = new Map();
 const mediaDatabase = new Promise((resolveDatabase, rejectDatabase) => {
@@ -416,8 +419,7 @@ function nodeTag(node) {
   if (['format', 'script'].includes(node.type)) {
     const isLive = node.source ? ['gemini', 'shopaikey'].includes(node.source) : (!isMockMode() && (hasShopApiKey() || geminiReady));
     if (isLive) {
-      const label = (node.source === 'shopaikey' || hasShopApiKey()) ? 'SHOPAI' : 'GEMINI';
-      return `<span class="mock-tag live">${label}</span>`;
+      return '<span class="mock-tag live">SHOPAI</span>';
     }
     return '<span class="mock-tag">MOCK</span>';
   }
@@ -509,8 +511,8 @@ const inspectors = {
     ${node.mode === 'prompt' ? field('Description', 'prompt', node.prompt, {tag:'textarea', max:400, placeholder:'A creator asks a question, then 4 quick app steps…'}) : ''}
     ${node.mode === 'prompt' ? '' : node.mode === 'url' ? `${field('Shorts URL', 'url', node.url, {max:200, placeholder:'https://youtube.com/shorts/…', hint:'A public Short whose structure you want to copy. Only its format is used, not its footage.'})}${youtubeId(node.url) ? `<a class="yt-link" href="https://www.youtube.com/shorts/${youtubeId(node.url)}" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/${youtubeId(node.url)}/hqdefault.jpg" alt="Short thumbnail"><span>Open on YouTube ↗</span></a>` : ''}` : '<div class="media-note">A 16-second UGC app promo: confession hook, one-second proof flash, four numbered steps, results payoff, CTA in the post caption.</div>'}`,
   format:node => { const format = node.format; return `${inputChips(node)}${runButton(node, 'extractFormat', format ? '↻ Re-extract format' : '✦ Extract format')}
-    <small class="muted">${isMockMode() ? 'Mock mode is ON. Toggle off on the home page or sidebar to use your ShopAIKey API key.' : (hasShopApiKey() ? 'ShopAIKey is active. Live Gemini analysis will watch the video.' : 'Live mode enabled. Add your ShopAIKey on the home page.')}</small>
-    ${format ? `<div class="form-group"><label>${format.source === 'shopaikey' ? 'Extracted via ShopAIKey (Gemini)' : format.source === 'gemini' ? 'Extracted by Gemini' : format.source === 'mock' ? `Mock result · ${escapeHTML(format.title)}` : format.source === 'annotated' ? `Annotated by hand · ${escapeHTML(format.title)}` : format.source === 'described' ? `Picked from your description · ${escapeHTML(format.title)}` : format.source === 'library' ? 'Scanned by Gemini for the Library' : 'Preset format'}</label>${format.source === 'annotated' ? '<small class="muted">Beats and timings were measured from this Short by hand.</small>' : ''}${format.source === 'mock' ? '<small class="muted">Picked from a format library (Mock mode).</small>' : ''}<div class="format-card"><strong>${escapeHTML(format.summary)}</strong><p>${escapeHTML(format.hookFormula)}</p>${beatBar(format)}<ol class="beats">${format.beats.map(beat => `<li><span style="background:${BEAT_COLOR[beat.kind]}">${beat.kind}</span><div><b>${escapeHTML(beat.caption || '—')}</b><small>${escapeHTML(beat.note)}</small></div><em>${beat.seconds}s</em></li>`).join('')}</ol><p class="format-meta">Captions: hook ${format.captionColors.hook}, steps ${format.captionColors.steps} · CTA in ${format.cta.placement === 'endcard' ? 'an end card' : 'the post caption'}</p></div></div>` : ''}`; },
+    <small class="muted">${isMockMode() ? 'Mock mode is ON. Toggle off on the home page or sidebar to use your ShopAIKey API key.' : (hasShopApiKey() ? 'ShopAIKey is active. Live analysis will watch the video.' : 'Live mode enabled. Add your ShopAIKey on the home page.')}</small>
+    ${format ? `<div class="form-group"><label>${format.source === 'shopaikey' || format.source === 'gemini' ? 'Extracted via ShopAIKey' : format.source === 'mock' ? `Mock result · ${escapeHTML(format.title)}` : format.source === 'annotated' ? `Annotated by hand · ${escapeHTML(format.title)}` : format.source === 'described' ? `Picked from your description · ${escapeHTML(format.title)}` : format.source === 'library' ? 'Scanned via ShopAIKey for the Library' : 'Preset format'}</label>${format.source === 'annotated' ? '<small class="muted">Beats and timings were measured from this Short by hand.</small>' : ''}${format.source === 'mock' ? '<small class="muted">Picked from a format library (Mock mode).</small>' : ''}<div class="format-card"><strong>${escapeHTML(format.summary)}</strong><p>${escapeHTML(format.hookFormula)}</p>${beatBar(format)}<ol class="beats">${format.beats.map(beat => `<li><span style="background:${BEAT_COLOR[beat.kind]}">${beat.kind}</span><div><b>${escapeHTML(beat.caption || '—')}</b><small>${escapeHTML(beat.note)}</small></div><em>${beat.seconds}s</em></li>`).join('')}</ol><p class="format-meta">Captions: hook ${format.captionColors.hook}, steps ${format.captionColors.steps} · CTA in ${format.cta.placement === 'endcard' ? 'an end card' : 'the post caption'}</p></div></div>` : ''}`; },
   publish:node => { const composer = source(node, 'reel'); return `${inputChips(node)}${runButton(node, 'writeMetadata', node.title ? '↻ Rewrite title + description (mock)' : '✦ Write title + description (mock)')}
     ${field(`Title · ${node.title.length}/100`, 'title', node.title, {max:100})}
     ${field('Description', 'description', node.description, {tag:'textarea', max:5000})}
@@ -551,14 +553,14 @@ const inspectors = {
       `}
       <div class="form-group">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <label style="margin:0;">AI Video Prompt (Veo 3.1)</label>
+          <label style="margin:0;">AI Video Prompt (Veo)</label>
           <button class="link-button" id="resetHookPrompt" type="button" style="font-size:11px;">↺ Reset to script</button>
         </div>
         <textarea data-field="prompt" rows="3" maxlength="800" placeholder="A vertical 9:16 UGC video of a creator speaking...">${escapeHTML(effectivePrompt)}</textarea>
-        <small class="muted">Editable video prompt sent to Google Veo 3.1 Fast.</small>
+        <small class="muted">Editable video prompt sent to Veo via ShopAIKey.</small>
       </div>
       ${runButton(node, 'generateHook', (node.mediaId || node.generated) ? '↻ Regenerate AI hook from script' : '✦ Generate AI hook from script')}
-      <small class="muted">${isMockMode() ? 'Mock mode is ON — generates simulated clip without using API credits. Toggle off on the home page for live Veo 3.1 video.' : (hasShopApiKey() ? 'ShopAIKey is active. Will generate a 9:16 vertical clip using Google Veo 3.1 Fast.' : 'Add your ShopAIKey on the home page to enable live Veo 3.1 video generation.')}</small>
+      <small class="muted">${isMockMode() ? 'Mock mode is ON — generates simulated clip without using API credits. Toggle off on the home page for live Veo video.' : (hasShopApiKey() ? 'ShopAIKey is active. Will generate a 9:16 vertical clip using Veo.' : 'Add your ShopAIKey on the home page to enable live Veo video generation.')}</small>
       ${node.mediaId && mediaUrls.get(node.mediaId) ? `
         <div class="media-preview">
           <video src="${escapeHTML(mediaUrls.get(node.mediaId))}" controls playsinline loop autoplay></video>
@@ -721,7 +723,7 @@ const STEPS = {
               format: formatOf(node),
               tone: node.tone,
               apiKey: apiKey || undefined,
-              baseUrl: 'https://api.shopaikey.com/v1beta'
+              baseUrl: 'https://api.shopaikey.com/v1'
             })
           });
           if (res.ok) {
@@ -921,12 +923,13 @@ async function extractFormat(reference, onStage) {
   if (!isMockMode()) {
     const apiKey = getShopApiKey();
     if (!apiKey && !geminiReady) {
-      console.warn('[PromoFlow] Live mode is active but no ShopAIKey API key found in localStorage.');
-      throw new Error('Mock mode is OFF, but no ShopAIKey API key was found. Enter your key on the home page or turn Mock mode ON.');
+      console.warn('[PromoFlow] Live mode is active but no API key found in localStorage or .env.');
+      throw new Error('Mock mode is OFF, but no API key was found. Enter your key on the home page, configure .env, or turn Mock mode ON.');
     }
-    const maskedKey = apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : '(none)';
-    console.log(`[PromoFlow] Requesting format extraction via ShopAIKey [Key: ${maskedKey}] for:`, reference.url);
-    onStage(apiKey ? 'Gemini is watching the Short via ShopAIKey…' : 'Gemini is watching the Short…');
+    const maskedKey = apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : '(server env)';
+    const providerLabel = (apiKey || serverShopAi) ? 'ShopAIKey' : 'Gemini';
+    console.log(`[PromoFlow] Requesting format extraction via ${providerLabel} [Key: ${maskedKey}] for:`, reference.url);
+    onStage(`Gemini is watching the Short via ${providerLabel}…`);
     const start = performance.now();
     const response = await fetch('/api/format', {
       method: 'POST',
@@ -934,7 +937,7 @@ async function extractFormat(reference, onStage) {
       body: JSON.stringify({
         url: reference.url,
         apiKey: apiKey || undefined,
-        baseUrl: 'https://api.shopaikey.com/v1beta'
+        baseUrl: 'https://api.shopaikey.com/v1'
       })
     });
     const result = await response.json().catch(() => ({}));
@@ -944,7 +947,7 @@ async function extractFormat(reference, onStage) {
       throw new Error(result.error || 'Could not extract the format via ShopAIKey');
     }
     console.log(`[PromoFlow] ShopAIKey format extraction succeeded in ${elapsed}ms:`, result);
-    return { key, format: result, message: result.source === 'shopaikey' ? 'Format extracted with Gemini via ShopAIKey' : 'Gemini extracted the format' };
+    return { key, format: result, message: 'Format extracted via ShopAIKey' };
   }
   await step(STAGES.format);
   if (KNOWN_FORMATS[key]) return {key, format:{...KNOWN_FORMATS[key], source:'annotated', videoId:key}, message:'Format loaded: annotated by hand from this Short (Mock mode)'};
@@ -963,7 +966,7 @@ async function runFormat(node, quiet = false) {
 }
 
 // ---------- Workflow planner ----------
-const FORMAT_SOURCE = {gemini:'Extracted by Gemini', shopaikey:'Extracted via ShopAIKey (Gemini)', library:'Scanned by Gemini · Library', annotated:'Annotated by hand', mock:'Mock result', described:'Picked from your description', preset:'Preset format'};
+const FORMAT_SOURCE = {gemini:'Extracted via ShopAIKey', shopaikey:'Extracted via ShopAIKey', library:'Scanned via ShopAIKey · Library', annotated:'Annotated by hand', mock:'Mock result', described:'Picked from your description', preset:'Preset format'};
 // The blocks a format needs, each with the reason. Deterministic: same format, same graph.
 function planWorkflow(format) {
   const count = kind => format.beats.filter(beat => beat.kind === kind).length;
@@ -1063,13 +1066,13 @@ async function generateScript(node) {
               format: formatOf(node),
               tone: node.tone,
               apiKey: apiKey || undefined,
-              baseUrl: 'https://api.shopaikey.com/v1beta'
+              baseUrl: 'https://api.shopaikey.com/v1'
             })
           });
           if (res.ok) {
             const aiScript = await res.json();
             Object.assign(node, aiScript, { basedOn: currentKey });
-            toast(`AI script generated via ${aiScript.source === 'shopaikey' ? 'ShopAIKey (Gemini)' : 'Gemini'}`);
+            toast('AI script generated via ShopAIKey');
             return;
           }
         } catch (err) {
@@ -1110,7 +1113,7 @@ async function generateHookClip(node) {
     if (!isMockMode()) {
       const apiKey = getShopApiKey();
       if (!apiKey && !geminiReady) {
-        throw new Error('Mock mode is OFF, but no ShopAIKey API key was found. Enter your key on the home page or turn Mock mode ON.');
+        throw new Error('Mock mode is OFF, but no API key was found. Enter your key on the home page, configure .env, or turn Mock mode ON.');
       }
       stageText.set(node.id, 'Submitting hook clip to Veo 3.1…');
       renderCanvas();
@@ -1123,7 +1126,7 @@ async function generateHookClip(node) {
           prompt: node.prompt,
           duration: node.duration || 4,
           apiKey: apiKey || undefined,
-          baseUrl: 'https://api.shopaikey.com/v1beta'
+          baseUrl: 'https://api.shopaikey.com/v1'
         })
       });
       const startData = await startRes.json().catch(() => null);
@@ -1147,7 +1150,7 @@ async function generateHookClip(node) {
           body: JSON.stringify({
             operation,
             apiKey: apiKey || undefined,
-            baseUrl: 'https://api.shopaikey.com/v1beta'
+            baseUrl: 'https://api.shopaikey.com/v1'
           })
         });
         const statusData = await statusRes.json().catch(() => null);
@@ -1641,6 +1644,7 @@ function syncApiConfigUI() {
   const mockOn = isMockMode();
   const key = getShopApiKey();
   const hasKey = key.length > 0;
+  const hasActiveKey = hasKey || geminiReady;
 
   const mockToggle = $('#mockModeToggle');
   if (mockToggle) mockToggle.checked = mockOn;
@@ -1656,20 +1660,24 @@ function syncApiConfigUI() {
     if (mockOn) {
       mockDesc.innerHTML = '<strong>Mock Mode is ON:</strong> Uses built-in format presets &amp; demo outputs (free offline mode, zero API costs).';
     } else if (hasKey) {
-      mockDesc.innerHTML = '<strong>Live AI Mode active:</strong> Connected to ShopAIKey (<code>https://api.shopaikey.com</code>). Ready to analyze real YouTube Shorts with Gemini.';
+      mockDesc.innerHTML = '<strong>Live AI Mode active:</strong> Connected to ShopAIKey (browser key). Ready to analyze real YouTube Shorts with Gemini.';
+    } else if (geminiReady) {
+      const providerLabel = serverShopAi ? 'ShopAIKey' : 'Google Gemini';
+      const modelsNote = serverModels ? `<br><small class="muted">Configured models from <code>.env</code> — Format: <code>${escapeHTML(serverModels.format)}</code> · Script: <code>${escapeHTML(serverModels.script)}</code> · Video: <code>${escapeHTML(serverModels.video)}</code></small>` : '';
+      mockDesc.innerHTML = `<strong>Live AI Mode active:</strong> Connected via server <code>.env</code> (${escapeHTML(providerLabel)}). Ready to analyze real YouTube Shorts.${modelsNote}`;
     } else {
-      mockDesc.innerHTML = '<strong>Live AI Mode enabled:</strong> Please paste and save your ShopAIKey API key below to process live videos.';
+      mockDesc.innerHTML = '<strong>Live AI Mode enabled:</strong> Please paste and save your ShopAIKey API key below or configure it in <code>.env</code>.';
     }
   }
 
   const dot = $('#apiStatusDot');
   if (dot) {
     dot.className = 'status-indicator-dot';
-    if (!mockOn) dot.classList.add(hasKey ? 'live' : 'warn');
+    if (!mockOn) dot.classList.add(hasActiveKey ? 'live' : 'warn');
   }
 
   const card = $('#apiConfigCard');
-  if (card) card.classList.toggle('live-active', !mockOn && hasKey);
+  if (card) card.classList.toggle('live-active', !mockOn && hasActiveKey);
 
   const keyInput = $('#shopApiKeyInput');
   if (keyInput && document.activeElement !== keyInput) keyInput.value = key;
@@ -1678,9 +1686,11 @@ function syncApiConfigUI() {
   if (statusMsg) {
     if (hasKey) {
       const masked = key.length > 8 ? `${key.slice(0, 4)}••••${key.slice(-4)}` : '••••••••';
-      statusMsg.innerHTML = `<span class="api-key-status-msg success">✓ Key saved (${escapeHTML(masked)}). Active for live requests.</span>`;
+      statusMsg.innerHTML = `<span class="api-key-status-msg success">✓ Browser key saved (${escapeHTML(masked)}). Overriding server .env.</span>`;
+    } else if (geminiReady) {
+      statusMsg.innerHTML = `<span class="api-key-status-msg success">✓ Active using server <code>.env</code> (${serverShopAi ? 'ShopAIKey' : 'Gemini'}). Leave input blank to use it, or paste a key here to override.</span>`;
     } else {
-      statusMsg.innerHTML = '<span class="api-key-status-msg">Key is stored in your browser and used when Mock Mode is OFF.</span>';
+      statusMsg.innerHTML = '<span class="api-key-status-msg">Key can be set in <code>.env</code> file or stored in browser storage.</span>';
     }
   }
 
@@ -1696,8 +1706,10 @@ function syncApiConfigUI() {
       studioDesc.textContent = 'Mock mode is ON: Format extractor and other blocks use built-in presets and demo outputs.';
     } else if (hasKey) {
       studioDesc.textContent = 'Live mode is ON: The Format extractor connects to ShopAIKey with Gemini.';
+    } else if (geminiReady) {
+      studioDesc.textContent = `Live mode is ON: Connected via .env (${serverShopAi ? 'ShopAIKey' : 'Gemini'}).`;
     } else {
-      studioDesc.textContent = 'Live mode is ON, but no key is saved. Please enter your key on the home page.';
+      studioDesc.textContent = 'Live mode is ON, but no key is saved. Please enter your key on the home page or set it in .env.';
     }
   }
 
@@ -1706,23 +1718,23 @@ function syncApiConfigUI() {
     if (mockOn) {
       geminiStatus.textContent = 'Mock mode: using presets (offline).';
     } else if (hasKey) {
-      geminiStatus.textContent = 'ShopAIKey connected — watching real Shorts.';
+      geminiStatus.textContent = 'ShopAIKey connected (browser key).';
     } else if (geminiReady) {
-      geminiStatus.textContent = 'Server Gemini connected.';
+      geminiStatus.textContent = '.env connected (ShopAIKey).';
     } else {
-      geminiStatus.textContent = 'ShopAIKey missing — add key on home page.';
+      geminiStatus.textContent = 'SHOPAI_API_KEY missing — set in .env or home page.';
     }
   }
 }
 
 $('#mockModeToggle')?.addEventListener('change', event => {
   setMockMode(event.target.checked);
-  toast(event.target.checked ? 'Mock mode enabled — using built-in presets' : (hasShopApiKey() ? 'Live mode enabled — using ShopAIKey' : 'Live mode enabled — please enter your ShopAIKey'));
+  toast(event.target.checked ? 'Mock mode enabled — using built-in presets' : ((hasShopApiKey() || geminiReady) ? 'Live mode enabled' : 'Live mode enabled — please enter your ShopAIKey or configure .env'));
 });
 
 $('#studioMockToggle')?.addEventListener('change', event => {
   setMockMode(event.target.checked);
-  toast(event.target.checked ? 'Mock mode enabled' : (hasShopApiKey() ? 'Live mode enabled' : 'Please enter ShopAIKey on home page'));
+  toast(event.target.checked ? 'Mock mode enabled' : ((hasShopApiKey() || geminiReady) ? 'Live mode enabled' : 'Please enter ShopAIKey on home page or set in .env'));
 });
 
 $('#saveApiKeyBtn')?.addEventListener('click', () => {
@@ -1751,7 +1763,10 @@ window.addEventListener('hashchange', route);
 renderLandingBeats(); route();
 renderCanvas(); renderInspector();
 fetch('/api/health').then(response => response.json()).then(health => {
-  geminiReady = !!health.geminiConfigured;
+  geminiReady = !!health.geminiConfigured || !!health.hasServerKey;
+  serverShopAi = !!health.shopaiConfigured;
+  serverModels = health.models || null;
+  serverProvider = health.provider || null;
   syncApiConfigUI();
   renderCanvas();
 }).catch(() => {

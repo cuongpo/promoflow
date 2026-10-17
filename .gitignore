@@ -1,6 +1,7 @@
 # Secrets: API keys (Gemini, ElevenLabs, proxy) live in .env
 .env
 .env.*
+.idea
 !.env.example
 *.pem
 *.key
