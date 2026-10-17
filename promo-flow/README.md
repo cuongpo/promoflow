@@ -26,10 +26,13 @@ Without a Gemini key, a pasted link uses its hand-annotated format when one exis
 The data is real. `scan-library.mjs` reads each Short's public YouTube page for the counts, has Gemini watch the video for the format and notes, and saves the cover to `dist/library/`. Re-run it to refresh the numbers or after editing the list at the top of the file:
 
 ```bash
-GEMINI_API_KEY=... node scan-library.mjs
+# Using keys from .env or inline:
+node scan-library.mjs
+# or:
+SHOPAI_API_KEY=... node scan-library.mjs
 ```
 
-Set `GEMINI_BASE_URL` to send the Gemini calls through a compatible proxy when Google's endpoint is overloaded. A Short picked from the library reuses its scanned format, so Start needs no Gemini call for it; the Canva Short keeps its hand-timed format.
+Configure `SHOPAI_API_KEY` and models in `.env`. Set `SHOPAI_BASE_URL` to send calls through a custom proxy when needed. A Short picked from the library reuses its scanned format, so Start needs no Gemini call for it; the Canva Short keeps its hand-timed format.
 
 ## How the blocks fit together
 
@@ -42,7 +45,7 @@ Demo video ──────┴────────────────
 ```
 
 - **Reference Short** — a public YouTube Shorts link, or the built-in preset (a 16-second UGC app promo). The card shows the Short's real title and channel from YouTube's public oEmbed endpoint.
-- **Format extractor** — sends the link to Gemini, which watches the Short and returns its format as JSON: an ordered list of beats (hook, proof, step, payoff, CTA) with durations, the hook formula, caption colors, and where the CTA lives. Only the format is used, never the footage.
+- **Format extractor** — sends the link to Gemini via ShopAIKey, which watches the Short and returns its format as JSON: an ordered list of beats (hook, proof, step, payoff, CTA) with durations, the hook formula, caption colors, and where the CTA lives. Only the format is used, never the footage.
 - **Product context** — name, description, audience, the pain it removes, the result you got, and key features (one per line).
 - **Screenshots** — app screens and results. They feed the proof collage, and the demo cutter when there is no demo video.
 - **Demo video** — an MP4, MOV, or WebM screen recording.
@@ -59,16 +62,14 @@ Wires are typed: an output only connects to an input of the same type. Click a c
 
 **Sample project.** *Try the sample* (sidebar, or the banner on a fresh canvas) has PromoFlow make a Short about itself. The reference is a real public YouTube Short, Canva's "Create & launch LinkedIn Ads without leaving Canva" (`youtube.com/shorts/nAZD57mN78I`), whose beats were timed by hand from its scene cuts and captions and ship as an annotated format, so the sample runs without a Gemini key. The inputs in `dist/sample/` are a real 30-second screen recording of PromoFlow and four real screens of its output. The hook uses a generated creator still in the sample; upload your own face-to-camera clip to replace it. No footage from the reference is used.
 
-**Gemini and mock mode.** Every block runs without an API key, from the Shorts link to the upload. The Format extractor calls Gemini (`/api/format`, model `GEMINI_MODEL`, default `gemini-3.8-flash`) when the server has `GEMINI_API_KEY`; Gemini's YouTube URL support is in preview, and only public videos work. Without a key, it shows the stages a real analysis would go through and picks one of four formats from a library (UGC app promo, POV tutorial, problem → fix listicle, before/after reveal), seeded by the video ID and marked as mock. The sidebar shows whether Gemini is connected. The other AI blocks always run in the browser with demo output, each showing its own stages: template scripts in the format's tone and CTA style, a generated creator still with a camera move, a screenshot grid, demo cuts at evenly spaced points, and template titles and descriptions. The mock upload posts nothing. Uploads, preview, and export are real. Projects save to browser storage, and media stays in this browser's IndexedDB.
-
-The server still has Gemini (hooks) and Veo (video) endpoints plus website capture in `generate.mjs`, `capture.mjs`, and `api-routes.mjs`, but the mock UI does not call them.
+**ShopAIKey and mock mode.** Every block runs without an API key in Mock Mode. When configured with `SHOPAI_API_KEY` in `.env` (or in the browser UI), PromoFlow calls ShopAIKey (`/api/format`, `/api/script`, `/api/video`) to analyze real public YouTube Shorts, write tailored ad scripts, and generate Veo 3.1 hook clips. Without a key, the app runs with labelled mock outputs.
 
 ## Run on Cloud Run
 
-The included Dockerfile runs the same app and API on Cloud Run. Configure a `GEMINI_API_KEY` secret in Google Secret Manager, then deploy the `promo-flow/` folder with a command such as:
+The included Dockerfile runs the same app and API on Cloud Run. Configure a `SHOPAI_API_KEY` secret in Google Secret Manager, then deploy the `promo-flow/` folder with a command such as:
 
 ```bash
-gcloud run deploy promoflow --source . --region asia-southeast1 --allow-unauthenticated --memory 2Gi --set-secrets GEMINI_API_KEY=promoflow-gemini-key:latest
+gcloud run deploy promoflow --source . --region asia-southeast1 --allow-unauthenticated --memory 2Gi --set-secrets SHOPAI_API_KEY=promoflow-shopai-key:latest
 ```
 
 Run that command from `promo-flow/` after selecting your Google Cloud project. The deployment needs a Chromium-capable container and the supplied Dockerfile provides it. The current ChatGPT Site is a static preview and does not run the URL capture API.

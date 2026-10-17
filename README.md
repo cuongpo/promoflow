@@ -16,4 +16,12 @@ npm install
 npm run dev        # http://localhost:4173
 ```
 
-Set `GEMINI_API_KEY` in the environment to let the Format extractor watch real Shorts; without it the app runs with labelled mock outputs.
+Copy `.env.example` to `.env` to configure your API keys and models:
+- **`SHOPAI_API_KEY`**: Connects live AI for watching real Shorts, writing tailored scripts, and generating Veo hooks.
+- **Model controls per step**:
+  - `FORMAT_MODEL`: Model used to watch & extract Short formats (e.g. `gemini-3-flash-preview` or `gemini-3.8-flash`)
+  - `SCRIPT_MODEL`: Model used for video script generation
+  - `HOOKS_MODEL`: Model used for opening hook copy options
+  - `VEO_MODEL`: Model used for Veo 3.1 video generation (`veo3.1-fast` or `veo-3.1-fast-generate-preview`)
+
+Without an API key, the app runs in Mock Mode using hand-annotated presets and demo outputs.

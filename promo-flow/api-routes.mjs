@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream';
 import { captureWebsite, browserPath } from './capture.mjs';
-import { siteContext, generateHooks, generateFullScript, startVideo, videoStatus, videoFile, extractFormat, shortInfo } from './generate.mjs';
+import { siteContext, generateHooks, generateFullScript, startVideo, videoStatus, videoFile, extractFormat, shortInfo, isShopAI, getModelForStep } from './generate.mjs';
 
 // Shared by the local server and the Vercel function, so both expose the same API.
 let activeCaptures = 0;
@@ -12,7 +12,7 @@ function json(response, status, value) {
 
 function fail(response, error) {
   const message = error instanceof Error ? error.message : 'Request failed';
-  const status = /could not be found/.test(message) ? 404 : /not configured/.test(message) ? 501 : /Gemini/.test(message) ? 502 : /unavailable/.test(message) ? 503 : /URL|JSON|large|port|private|reserved|prompt|Unknown/.test(message) ? 400 : 500;
+  const status = /could not be found/.test(message) ? 404 : /not configured/.test(message) ? 501 : /ShopAIKey|Gemini/.test(message) ? 502 : /unavailable/.test(message) ? 503 : /URL|JSON|large|port|private|reserved|prompt|Unknown/.test(message) ? 400 : 500;
   json(response, status, { error: message });
 }
 
@@ -54,17 +54,32 @@ const routes = {
 export const bodyLimit = route => route === 'video' ? 3_000_000 : 16000;
 
 export async function handleApi(route, method, input, response) {
-  if (route === 'health') { json(response, 200, { ready: !!browserPath(), geminiConfigured: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) }); return; }
+  if (route === 'health') {
+    const hasShopAI = !!process.env.SHOPAI_API_KEY;
+    json(response, 200, {
+      ready: !!browserPath(),
+      configured: hasShopAI,
+      shopaiConfigured: hasShopAI,
+      geminiConfigured: hasShopAI,
+      hasServerKey: hasShopAI,
+      provider: 'shopaikey',
+      models: {
+        format: getModelForStep('format'),
+        script: getModelForStep('script'),
+        hooks: getModelForStep('hooks'),
+        video: getModelForStep('video')
+      }
+    });
+    return;
+  }
   if (!routes[route]) { json(response, 404, { error: 'Unknown API route' }); return; }
   if (method !== 'POST') { json(response, 405, { error: 'Use POST' }); return; }
 
   const keyTag = input?.apiKey
     ? `[Key: ${input.apiKey.length > 8 ? `${input.apiKey.slice(0, 4)}...${input.apiKey.slice(-4)}` : '****'}]`
-    : '[Key: env/default]';
-  const isShopAI = input?.baseUrl?.includes('shopaikey') || (input?.apiKey && !input.apiKey.startsWith('AIza'));
-  const provider = isShopAI ? 'ShopAIKey' : 'Google Gemini';
+    : '[Key: env]';
 
-  console.log(`[${new Date().toISOString()}] [API:${route}] ${provider} request ${keyTag}`);
+  console.log(`[${new Date().toISOString()}] [API:${route}] ShopAIKey request ${keyTag}`);
 
   try {
     await routes[route](input || {}, response);

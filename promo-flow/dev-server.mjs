@@ -1,3 +1,4 @@
+import './env.mjs';
 import { createServer } from 'node:http';
 import { readFile, watch } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';

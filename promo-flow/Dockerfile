@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends chromium ca-cer
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
-COPY dev-server.mjs api-routes.mjs capture.mjs generate.mjs ./
+COPY dev-server.mjs api-routes.mjs capture.mjs generate.mjs env.mjs ./
 COPY dist ./dist
 
 ENV NODE_ENV=production CHROME_BIN=/usr/bin/chromium

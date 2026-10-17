@@ -1,0 +1,18 @@
+services:
+  promoflow:
+    build:
+      context: ./promo-flow
+      dockerfile: Dockerfile
+    container_name: promoflow-local
+    restart: unless-stopped
+    ports:
+      - "4173:8080"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=8080
+      - NODE_ENV=production
+      - CHROME_BIN=/usr/bin/chromium
+    shm_size: '512mb'
+    volumes:
+      - ./.env:/app/.env:ro

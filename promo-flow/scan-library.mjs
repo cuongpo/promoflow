@@ -1,9 +1,9 @@
 // Scans the curated Shorts below and writes dist/library.json for the Library page.
 // Stats come from each Short's public YouTube page; format and insights come from Gemini watching the video.
-// Run: GEMINI_API_KEY=... node scan-library.mjs   (re-run any time to refresh the numbers)
+import './env.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { extractFormat, gemini, clean } from './generate.mjs';
+import { extractFormat, gemini, clean, apiKeyFrom, getModelForStep } from './generate.mjs';
 
 // Picked by hand: app promos that clearly outperformed their channel, one per domain.
 // cover: which YouTube still to use when the Short's own cover is a dark first frame.
@@ -16,9 +16,9 @@ const SHORTS = [
 ];
 
 const out = resolve(import.meta.dirname, 'dist');
-const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-if (!key) { console.error('Set GEMINI_API_KEY first.'); process.exit(1); }
-const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const key = apiKeyFrom();
+if (!key) { console.error('Set SHOPAI_API_KEY in .env first.'); process.exit(1); }
+const model = getModelForStep('library');
 const headers = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130 Safari/537.36', 'Accept-Language': 'en-US,en' };
 
 // "2.58 thousand subscribers" → 2580, "1.2K" → 1200
