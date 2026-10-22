@@ -45,7 +45,7 @@ Demo video ──────┴────────────────
 ```
 
 - **Reference Short** — a public YouTube Shorts link, or the built-in preset (a 16-second UGC app promo). The card shows the Short's real title and channel from YouTube's public oEmbed endpoint.
-- **Format extractor** — sends the link to Gemini via ShopAIKey, which watches the Short and returns its format as JSON: an ordered list of beats (hook, proof, step, payoff, CTA) with durations, the hook formula, caption colors, and where the CTA lives. Only the format is used, never the footage.
+- **Format extractor** — sends the link to Gemini, which watches the Short and returns its format as JSON: an ordered list of beats (hook, proof, step, payoff, CTA) with durations, the hook formula, caption colors, and where the CTA lives. Only the format is used, never the footage.
 - **Product context** — name, description, audience, the pain it removes, the result you got, and key features (one per line).
 - **Screenshots** — app screens and results. They feed the proof collage, and the demo cutter when there is no demo video.
 - **Demo video** — an MP4, MOV, or WebM screen recording.
@@ -62,7 +62,7 @@ Wires are typed: an output only connects to an input of the same type. Click a c
 
 **Sample project.** *Try the sample* (sidebar, or the banner on a fresh canvas) has PromoFlow make a Short about itself. The reference is a real public YouTube Short, Canva's "Create & launch LinkedIn Ads without leaving Canva" (`youtube.com/shorts/nAZD57mN78I`), whose beats were timed by hand from its scene cuts and captions and ship as an annotated format, so the sample runs without a Gemini key. The inputs in `dist/sample/` are a real 30-second screen recording of PromoFlow and four real screens of its output. The hook uses a generated creator still in the sample; upload your own face-to-camera clip to replace it. No footage from the reference is used.
 
-**ShopAIKey and mock mode.** Every block runs without an API key in Mock Mode. When configured with `SHOPAI_API_KEY` in `.env` (or in the browser UI), PromoFlow calls ShopAIKey (`/api/format`, `/api/script`, `/api/video`) to analyze real public YouTube Shorts, write tailored ad scripts, and generate Veo 3.1 hook clips. Without a key, the app runs with labelled mock outputs.
+**Mock mode and Live AI mode.** Every block runs without an API key in Mock Mode. When configured with `SHOPAI_API_KEY` in `.env` (or in the browser UI when enabled), PromoFlow calls Gemini & Veo 3 (`/api/format`, `/api/script`, `/api/video`) to analyze real public YouTube Shorts, write tailored ad scripts, and generate Veo 3 hook clips. Without a key, the app runs with labelled mock outputs.
 
 ## Run on Cloud Run
 
