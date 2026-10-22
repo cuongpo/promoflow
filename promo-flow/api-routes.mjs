@@ -12,7 +12,7 @@ function json(response, status, value) {
 
 function fail(response, error) {
   const message = error instanceof Error ? error.message : 'Request failed';
-  const status = /could not be found/.test(message) ? 404 : /not configured/.test(message) ? 501 : /ShopAIKey|Gemini/.test(message) ? 502 : /unavailable/.test(message) ? 503 : /URL|JSON|large|port|private|reserved|prompt|Unknown/.test(message) ? 400 : 500;
+  const status = /could not be found/.test(message) ? 404 : /not configured/.test(message) ? 501 : /ShopAIKey|Gemini|Veo/.test(message) ? 502 : /unavailable/.test(message) ? 503 : /URL|JSON|large|port|private|reserved|prompt|Unknown/.test(message) ? 400 : 500;
   json(response, status, { error: message });
 }
 
@@ -55,14 +55,20 @@ export const bodyLimit = route => route === 'video' ? 3_000_000 : 16000;
 
 export async function handleApi(route, method, input, response) {
   if (route === 'health') {
-    const hasShopAI = !!process.env.SHOPAI_API_KEY;
+    const hasKey = !!(process.env.GEMINI_API_KEY || process.env.SHOPAI_API_KEY);
+    const showApiKeyInput = process.env.SHOW_API_KEY_INPUT !== undefined
+      ? ['true', '1', 'yes', 'on'].includes(String(process.env.SHOW_API_KEY_INPUT).toLowerCase().trim())
+      : (process.env.HIDE_API_KEY_INPUT !== undefined
+          ? !['true', '1', 'yes', 'on'].includes(String(process.env.HIDE_API_KEY_INPUT).toLowerCase().trim())
+          : false);
     json(response, 200, {
       ready: !!browserPath(),
-      configured: hasShopAI,
-      shopaiConfigured: hasShopAI,
-      geminiConfigured: hasShopAI,
-      hasServerKey: hasShopAI,
-      provider: 'shopaikey',
+      configured: hasKey,
+      shopaiConfigured: hasKey,
+      geminiConfigured: hasKey,
+      hasServerKey: hasKey,
+      showApiKeyInput,
+      provider: 'gemini',
       models: {
         format: getModelForStep('format'),
         script: getModelForStep('script'),
@@ -79,7 +85,7 @@ export async function handleApi(route, method, input, response) {
     ? `[Key: ${input.apiKey.length > 8 ? `${input.apiKey.slice(0, 4)}...${input.apiKey.slice(-4)}` : '****'}]`
     : '[Key: env]';
 
-  console.log(`[${new Date().toISOString()}] [API:${route}] ShopAIKey request ${keyTag}`);
+  console.log(`[${new Date().toISOString()}] [API:${route}] Gemini/Veo request ${keyTag}`);
 
   try {
     await routes[route](input || {}, response);

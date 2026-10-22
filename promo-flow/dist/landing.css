@@ -106,7 +106,9 @@ a.button{text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .switch-toggle input:checked+.toggle-slider{background-color:#d97706;border-color:#f59e0b}
 .switch-toggle input:checked+.toggle-slider:before{transform:translateX(20px);background-color:#fff}
 .api-config-desc{font-size:13px;color:#9aa1a9;line-height:1.5;margin:10px 0 14px}
+.api-config-card.hide-key-input .api-config-desc{margin-bottom:0}
 .api-key-field-group{border-top:1px solid #282d36;padding-top:12px}
+.api-key-field-group[hidden]{display:none!important}
 .api-key-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .api-key-label-row label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#aeb3b9}
 .key-help-link{font-size:11px;color:#c5f36a;text-decoration:none}

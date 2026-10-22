@@ -7,7 +7,7 @@ function isMockMode() {
   return saved === null ? true : saved === 'true';
 }
 function setMockMode(val) {
-  console.log(`[PromoFlow] Mock mode switched: ${val ? 'ON (Presets/Free)' : 'OFF (Live AI with ShopAIKey)'}`);
+  console.log(`[PromoFlow] Mock mode switched: ${val ? 'ON (Presets/Free)' : 'OFF (Live AI with Gemini & Veo 3)'}`);
   localStorage.setItem(MOCK_MODE_KEY, String(val));
   syncApiConfigUI();
   renderCanvas();
@@ -22,7 +22,7 @@ function hasShopApiKey() {
 function setShopApiKey(key) {
   const trimmed = (key || '').trim();
   const masked = trimmed.length > 8 ? `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}` : (trimmed ? '****' : '(cleared)');
-  console.log(`[PromoFlow] ShopAIKey updated in browser storage: ${masked}`);
+  console.log(`[PromoFlow] API key updated in browser storage: ${masked}`);
   localStorage.setItem(SHOPAI_KEY_KEY, trimmed);
   syncApiConfigUI();
   renderCanvas();
@@ -163,6 +163,7 @@ let geminiReady = false;
 let serverShopAi = false;
 let serverModels = null;
 let serverProvider = null;
+let serverShowApiKeyInput = false;
 
 const mediaUrls = new Map();
 const mediaDatabase = new Promise((resolveDatabase, rejectDatabase) => {
@@ -357,7 +358,7 @@ function nodeStatus(node) {
   if (runState.get(node.id) === 'queued') return ['idle', 'Queued'];
   switch (node.type) {
     case 'reference': return node.mode === 'preset' ? ['ready', 'Preset format'] : node.mode === 'prompt' ? (node.prompt?.trim() ? ['ready', 'Described'] : ['idle', 'Describe the Short']) : youtubeId(node.url) ? ['ready', 'Short linked'] : ['idle', 'Paste a Shorts link'];
-    case 'format': return node.format ? ['ready', node.format.source === 'shopaikey' ? `ShopAIKey · ${node.format.beats.length} beats` : node.format.source === 'gemini' ? `Gemini · ${node.format.beats.length} beats` : `${({gemini:'Gemini', shopaikey:'ShopAIKey', library:'Library', mock:'Mock', annotated:'Annotated', described:'Described', preset:'Preset'})[node.format.source] || 'Format'} · ${node.format.beats.length} beats`] : source(node, 'reference') ? ['idle', 'Extract format'] : ['warn', 'Connect a Short'];
+    case 'format': return node.format ? ['ready', node.format.source === 'shopaikey' || node.format.source === 'gemini' ? `Gemini · ${node.format.beats.length} beats` : `${({gemini:'Gemini', shopaikey:'Gemini', library:'Library', mock:'Mock', annotated:'Annotated', described:'Described', preset:'Preset'})[node.format.source] || 'Format'} · ${node.format.beats.length} beats`] : source(node, 'reference') ? ['idle', 'Extract format'] : ['warn', 'Connect a Short'];
     case 'context': return node.appName ? ['ready', 'Ready'] : ['idle', 'Add product info'];
     case 'shots': return node.shots.length ? ['ready', `${node.shots.length} screenshot${node.shots.length > 1 ? 's' : ''}`] : ['idle', 'Upload screenshots'];
     case 'demo': return node.mediaId ? ['ready', `Demo · ${node.duration || '?'}s`] : ['idle', 'Upload a screen recording'];
@@ -412,14 +413,14 @@ function nodeTag(node) {
     if (node.mode === 'upload') return '<span class="mock-tag">CLIP</span>';
     if (node.mode === 'ai') {
       const isLive = !isMockMode() && (hasShopApiKey() || geminiReady);
-      return `<span class="mock-tag ${isLive ? 'live' : ''}">${isLive ? 'VEO' : 'AI MOCK'}</span>`;
+      return `<span class="mock-tag ${isLive ? 'live' : ''}">${isLive ? 'VEO 3' : 'AI MOCK'}</span>`;
     }
     return '<span class="mock-tag">MOCK</span>';
   }
   if (['format', 'script'].includes(node.type)) {
     const isLive = node.source ? ['gemini', 'shopaikey'].includes(node.source) : (!isMockMode() && (hasShopApiKey() || geminiReady));
     if (isLive) {
-      return '<span class="mock-tag live">SHOPAI</span>';
+      return '<span class="mock-tag live">GEMINI</span>';
     }
     return '<span class="mock-tag">MOCK</span>';
   }
@@ -511,8 +512,8 @@ const inspectors = {
     ${node.mode === 'prompt' ? field('Description', 'prompt', node.prompt, {tag:'textarea', max:400, placeholder:'A creator asks a question, then 4 quick app steps…'}) : ''}
     ${node.mode === 'prompt' ? '' : node.mode === 'url' ? `${field('Shorts URL', 'url', node.url, {max:200, placeholder:'https://youtube.com/shorts/…', hint:'A public Short whose structure you want to copy. Only its format is used, not its footage.'})}${youtubeId(node.url) ? `<a class="yt-link" href="https://www.youtube.com/shorts/${youtubeId(node.url)}" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/${youtubeId(node.url)}/hqdefault.jpg" alt="Short thumbnail"><span>Open on YouTube ↗</span></a>` : ''}` : '<div class="media-note">A 16-second UGC app promo: confession hook, one-second proof flash, four numbered steps, results payoff, CTA in the post caption.</div>'}`,
   format:node => { const format = node.format; return `${inputChips(node)}${runButton(node, 'extractFormat', format ? '↻ Re-extract format' : '✦ Extract format')}
-    <small class="muted">${isMockMode() ? 'Mock mode is ON. Toggle off on the home page or sidebar to use your ShopAIKey API key.' : (hasShopApiKey() ? 'ShopAIKey is active. Live analysis will watch the video.' : 'Live mode enabled. Add your ShopAIKey on the home page.')}</small>
-    ${format ? `<div class="form-group"><label>${format.source === 'shopaikey' || format.source === 'gemini' ? 'Extracted via ShopAIKey' : format.source === 'mock' ? `Mock result · ${escapeHTML(format.title)}` : format.source === 'annotated' ? `Annotated by hand · ${escapeHTML(format.title)}` : format.source === 'described' ? `Picked from your description · ${escapeHTML(format.title)}` : format.source === 'library' ? 'Scanned via ShopAIKey for the Library' : 'Preset format'}</label>${format.source === 'annotated' ? '<small class="muted">Beats and timings were measured from this Short by hand.</small>' : ''}${format.source === 'mock' ? '<small class="muted">Picked from a format library (Mock mode).</small>' : ''}<div class="format-card"><strong>${escapeHTML(format.summary)}</strong><p>${escapeHTML(format.hookFormula)}</p>${beatBar(format)}<ol class="beats">${format.beats.map(beat => `<li><span style="background:${BEAT_COLOR[beat.kind]}">${beat.kind}</span><div><b>${escapeHTML(beat.caption || '—')}</b><small>${escapeHTML(beat.note)}</small></div><em>${beat.seconds}s</em></li>`).join('')}</ol><p class="format-meta">Captions: hook ${format.captionColors.hook}, steps ${format.captionColors.steps} · CTA in ${format.cta.placement === 'endcard' ? 'an end card' : 'the post caption'}</p></div></div>` : ''}`; },
+    <small class="muted">${isMockMode() ? 'Mock mode is ON. Toggle off on the home page or sidebar to use live Gemini analysis.' : ((hasShopApiKey() || geminiReady) ? 'Gemini is active. Live analysis will watch the video.' : 'Live mode enabled. Configure your API key in .env or on the home page.')}</small>
+    ${format ? `<div class="form-group"><label>${format.source === 'shopaikey' || format.source === 'gemini' ? 'Extracted via Gemini' : format.source === 'mock' ? `Mock result · ${escapeHTML(format.title)}` : format.source === 'annotated' ? `Annotated by hand · ${escapeHTML(format.title)}` : format.source === 'described' ? `Picked from your description · ${escapeHTML(format.title)}` : format.source === 'library' ? 'Scanned via Gemini for the Library' : 'Preset format'}</label>${format.source === 'annotated' ? '<small class="muted">Beats and timings were measured from this Short by hand.</small>' : ''}${format.source === 'mock' ? '<small class="muted">Picked from a format library (Mock mode).</small>' : ''}<div class="format-card"><strong>${escapeHTML(format.summary)}</strong><p>${escapeHTML(format.hookFormula)}</p>${beatBar(format)}<ol class="beats">${format.beats.map(beat => `<li><span style="background:${BEAT_COLOR[beat.kind]}">${beat.kind}</span><div><b>${escapeHTML(beat.caption || '—')}</b><small>${escapeHTML(beat.note)}</small></div><em>${beat.seconds}s</em></li>`).join('')}</ol><p class="format-meta">Captions: hook ${format.captionColors.hook}, steps ${format.captionColors.steps} · CTA in ${format.cta.placement === 'endcard' ? 'an end card' : 'the post caption'}</p></div></div>` : ''}`; },
   publish:node => { const composer = source(node, 'reel'); return `${inputChips(node)}${runButton(node, 'writeMetadata', node.title ? '↻ Rewrite title + description (mock)' : '✦ Write title + description (mock)')}
     ${field(`Title · ${node.title.length}/100`, 'title', node.title, {max:100})}
     ${field('Description', 'description', node.description, {tag:'textarea', max:5000})}
@@ -553,14 +554,14 @@ const inspectors = {
       `}
       <div class="form-group">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <label style="margin:0;">AI Video Prompt (Veo)</label>
+          <label style="margin:0;">AI Video Prompt (Veo 3)</label>
           <button class="link-button" id="resetHookPrompt" type="button" style="font-size:11px;">↺ Reset to script</button>
         </div>
         <textarea data-field="prompt" rows="3" maxlength="800" placeholder="A vertical 9:16 UGC video of a creator speaking...">${escapeHTML(effectivePrompt)}</textarea>
-        <small class="muted">Editable video prompt sent to Veo via ShopAIKey.</small>
+        <small class="muted">Editable video prompt sent to Veo 3.</small>
       </div>
       ${runButton(node, 'generateHook', (node.mediaId || node.generated) ? '↻ Regenerate AI hook from script' : '✦ Generate AI hook from script')}
-      <small class="muted">${isMockMode() ? 'Mock mode is ON — generates simulated clip without using API credits. Toggle off on the home page for live Veo video.' : (hasShopApiKey() ? 'ShopAIKey is active. Will generate a 9:16 vertical clip using Veo.' : 'Add your ShopAIKey on the home page to enable live Veo video generation.')}</small>
+      <small class="muted">${isMockMode() ? 'Mock mode is ON — generates simulated clip without using API credits. Toggle off on the home page for live Veo 3 video.' : ((hasShopApiKey() || geminiReady) ? 'Live mode is active. Will generate a 9:16 vertical clip using Veo 3.' : 'Configure your API key in .env to enable live Veo 3 video generation.')}</small>
       ${node.mediaId && mediaUrls.get(node.mediaId) ? `
         <div class="media-preview">
           <video src="${escapeHTML(mediaUrls.get(node.mediaId))}" controls playsinline loop autoplay></video>
@@ -927,9 +928,9 @@ async function extractFormat(reference, onStage) {
       throw new Error('Mock mode is OFF, but no API key was found. Enter your key on the home page, configure .env, or turn Mock mode ON.');
     }
     const maskedKey = apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : '(server env)';
-    const providerLabel = (apiKey || serverShopAi) ? 'ShopAIKey' : 'Gemini';
+    const providerLabel = 'Gemini';
     console.log(`[PromoFlow] Requesting format extraction via ${providerLabel} [Key: ${maskedKey}] for:`, reference.url);
-    onStage(`Gemini is watching the Short via ${providerLabel}…`);
+    onStage('Gemini is watching the Short…');
     const start = performance.now();
     const response = await fetch('/api/format', {
       method: 'POST',
@@ -943,11 +944,11 @@ async function extractFormat(reference, onStage) {
     const result = await response.json().catch(() => ({}));
     const elapsed = Math.round(performance.now() - start);
     if (!response.ok) {
-      console.error(`[PromoFlow] ShopAIKey format extraction failed (${response.status}) in ${elapsed}ms:`, result.error);
-      throw new Error(result.error || 'Could not extract the format via ShopAIKey');
+      console.error(`[PromoFlow] Gemini format extraction failed (${response.status}) in ${elapsed}ms:`, result.error);
+      throw new Error(result.error || 'Could not extract the format via Gemini');
     }
-    console.log(`[PromoFlow] ShopAIKey format extraction succeeded in ${elapsed}ms:`, result);
-    return { key, format: result, message: 'Format extracted via ShopAIKey' };
+    console.log(`[PromoFlow] Gemini format extraction succeeded in ${elapsed}ms:`, result);
+    return { key, format: result, message: 'Format extracted via Gemini' };
   }
   await step(STAGES.format);
   if (KNOWN_FORMATS[key]) return {key, format:{...KNOWN_FORMATS[key], source:'annotated', videoId:key}, message:'Format loaded: annotated by hand from this Short (Mock mode)'};
@@ -966,7 +967,7 @@ async function runFormat(node, quiet = false) {
 }
 
 // ---------- Workflow planner ----------
-const FORMAT_SOURCE = {gemini:'Extracted via ShopAIKey', shopaikey:'Extracted via ShopAIKey', library:'Scanned via ShopAIKey · Library', annotated:'Annotated by hand', mock:'Mock result', described:'Picked from your description', preset:'Preset format'};
+const FORMAT_SOURCE = {gemini:'Extracted via Gemini', shopaikey:'Extracted via Gemini', library:'Scanned via Gemini · Library', annotated:'Annotated by hand', mock:'Mock result', described:'Picked from your description', preset:'Preset format'};
 // The blocks a format needs, each with the reason. Deterministic: same format, same graph.
 function planWorkflow(format) {
   const count = kind => format.beats.filter(beat => beat.kind === kind).length;
@@ -1072,7 +1073,7 @@ async function generateScript(node) {
           if (res.ok) {
             const aiScript = await res.json();
             Object.assign(node, aiScript, { basedOn: currentKey });
-            toast('AI script generated via ShopAIKey');
+            toast('AI script generated via Gemini');
             return;
           }
         } catch (err) {
@@ -1115,7 +1116,7 @@ async function generateHookClip(node) {
       if (!apiKey && !geminiReady) {
         throw new Error('Mock mode is OFF, but no API key was found. Enter your key on the home page, configure .env, or turn Mock mode ON.');
       }
-      stageText.set(node.id, 'Submitting hook clip to Veo 3.1…');
+      stageText.set(node.id, 'Submitting hook clip to Veo 3…');
       renderCanvas();
       renderInspector();
 
@@ -1135,8 +1136,8 @@ async function generateHookClip(node) {
       }
 
       const operation = startData.operation;
-      console.log('[PromoFlow] Veo generation task started:', operation);
-      stageText.set(node.id, 'Veo 3.1 generating vertical hook…');
+      console.log('[PromoFlow] Veo 3 generation task started:', operation);
+      stageText.set(node.id, 'Veo 3 generating vertical hook…');
       renderCanvas();
       renderInspector();
 
@@ -1163,7 +1164,7 @@ async function generateHookClip(node) {
         }
         const elapsedSec = Math.round((Date.now() - startTime) / 1000);
         const progressLabel = statusData.progress ? `${statusData.progress} · ${elapsedSec}s` : `${elapsedSec}s`;
-        stageText.set(node.id, `Veo 3.1 generating… ${progressLabel}`);
+        stageText.set(node.id, `Veo 3 generating… ${progressLabel}`);
         renderCanvas();
         renderInspector();
       }
@@ -1196,7 +1197,7 @@ async function generateHookClip(node) {
       node.mediaType = 'video';
       node.mediaName = 'veo-hook-clip.mp4';
       node.generated = true;
-      toast('✦ AI hook video generated with Veo 3.1!');
+      toast('✦ AI hook video generated with Veo 3!');
       return;
     }
 
@@ -1644,7 +1645,16 @@ function syncApiConfigUI() {
   const mockOn = isMockMode();
   const key = getShopApiKey();
   const hasKey = key.length > 0;
-  const hasActiveKey = hasKey || geminiReady;
+  const hasActiveKey = (serverShowApiKeyInput && hasKey) || geminiReady;
+
+  const keyFieldGroup = $('#apiKeyFieldGroup');
+  if (keyFieldGroup) {
+    if (serverShowApiKeyInput) {
+      keyFieldGroup.removeAttribute('hidden');
+    } else {
+      keyFieldGroup.setAttribute('hidden', '');
+    }
+  }
 
   const mockToggle = $('#mockModeToggle');
   if (mockToggle) mockToggle.checked = mockOn;
@@ -1659,14 +1669,11 @@ function syncApiConfigUI() {
   if (mockDesc) {
     if (mockOn) {
       mockDesc.innerHTML = '<strong>Mock Mode is ON:</strong> Uses built-in format presets &amp; demo outputs (free offline mode, zero API costs).';
-    } else if (hasKey) {
-      mockDesc.innerHTML = '<strong>Live AI Mode active:</strong> Connected to ShopAIKey (browser key). Ready to analyze real YouTube Shorts with Gemini.';
-    } else if (geminiReady) {
-      const providerLabel = serverShopAi ? 'ShopAIKey' : 'Google Gemini';
-      const modelsNote = serverModels ? `<br><small class="muted">Configured models from <code>.env</code> — Format: <code>${escapeHTML(serverModels.format)}</code> · Script: <code>${escapeHTML(serverModels.script)}</code> · Video: <code>${escapeHTML(serverModels.video)}</code></small>` : '';
-      mockDesc.innerHTML = `<strong>Live AI Mode active:</strong> Connected via server <code>.env</code> (${escapeHTML(providerLabel)}). Ready to analyze real YouTube Shorts.${modelsNote}`;
+    } else if (hasActiveKey) {
+      const modelsNote = serverModels ? `<br><small class="muted">Configured models — Format: <code>${escapeHTML(serverModels.format)}</code> · Script: <code>${escapeHTML(serverModels.script)}</code> · Video: <code>${escapeHTML(serverModels.video)}</code></small>` : '';
+      mockDesc.innerHTML = `<strong>Live AI Mode active:</strong> Connected to Gemini &amp; Veo 3. Ready to analyze real YouTube Shorts.${modelsNote}`;
     } else {
-      mockDesc.innerHTML = '<strong>Live AI Mode enabled:</strong> Please paste and save your ShopAIKey API key below or configure it in <code>.env</code>.';
+      mockDesc.innerHTML = '<strong>Live AI Mode enabled:</strong> Ready to analyze real YouTube Shorts with Gemini &amp; Veo 3. Configure API key in <code>.env</code>.';
     }
   }
 
@@ -1677,7 +1684,10 @@ function syncApiConfigUI() {
   }
 
   const card = $('#apiConfigCard');
-  if (card) card.classList.toggle('live-active', !mockOn && hasActiveKey);
+  if (card) {
+    card.classList.toggle('live-active', !mockOn && hasActiveKey);
+    card.classList.toggle('hide-key-input', !serverShowApiKeyInput);
+  }
 
   const keyInput = $('#shopApiKeyInput');
   if (keyInput && document.activeElement !== keyInput) keyInput.value = key;
@@ -1688,7 +1698,7 @@ function syncApiConfigUI() {
       const masked = key.length > 8 ? `${key.slice(0, 4)}••••${key.slice(-4)}` : '••••••••';
       statusMsg.innerHTML = `<span class="api-key-status-msg success">✓ Browser key saved (${escapeHTML(masked)}). Overriding server .env.</span>`;
     } else if (geminiReady) {
-      statusMsg.innerHTML = `<span class="api-key-status-msg success">✓ Active using server <code>.env</code> (${serverShopAi ? 'ShopAIKey' : 'Gemini'}). Leave input blank to use it, or paste a key here to override.</span>`;
+      statusMsg.innerHTML = '<span class="api-key-status-msg success">✓ Active using server <code>.env</code> (Gemini &amp; Veo 3). Leave input blank to use it, or paste a key here to override.</span>';
     } else {
       statusMsg.innerHTML = '<span class="api-key-status-msg">Key can be set in <code>.env</code> file or stored in browser storage.</span>';
     }
@@ -1704,12 +1714,10 @@ function syncApiConfigUI() {
   if (studioDesc) {
     if (mockOn) {
       studioDesc.textContent = 'Mock mode is ON: Format extractor and other blocks use built-in presets and demo outputs.';
-    } else if (hasKey) {
-      studioDesc.textContent = 'Live mode is ON: The Format extractor connects to ShopAIKey with Gemini.';
-    } else if (geminiReady) {
-      studioDesc.textContent = `Live mode is ON: Connected via .env (${serverShopAi ? 'ShopAIKey' : 'Gemini'}).`;
+    } else if (hasActiveKey) {
+      studioDesc.textContent = 'Live mode is ON: Format extractor and script writer connect to Gemini; hook generator connects to Veo 3.';
     } else {
-      studioDesc.textContent = 'Live mode is ON, but no key is saved. Please enter your key on the home page or set it in .env.';
+      studioDesc.textContent = 'Live mode is ON, but no API key is configured. Please set your API key in .env.';
     }
   }
 
@@ -1717,37 +1725,35 @@ function syncApiConfigUI() {
   if (geminiStatus) {
     if (mockOn) {
       geminiStatus.textContent = 'Mock mode: using presets (offline).';
-    } else if (hasKey) {
-      geminiStatus.textContent = 'ShopAIKey connected (browser key).';
-    } else if (geminiReady) {
-      geminiStatus.textContent = '.env connected (ShopAIKey).';
+    } else if (hasActiveKey) {
+      geminiStatus.textContent = 'Gemini & Veo 3 connected.';
     } else {
-      geminiStatus.textContent = 'SHOPAI_API_KEY missing — set in .env or home page.';
+      geminiStatus.textContent = 'API key missing — set in .env.';
     }
   }
 }
 
 $('#mockModeToggle')?.addEventListener('change', event => {
   setMockMode(event.target.checked);
-  toast(event.target.checked ? 'Mock mode enabled — using built-in presets' : ((hasShopApiKey() || geminiReady) ? 'Live mode enabled' : 'Live mode enabled — please enter your ShopAIKey or configure .env'));
+  toast(event.target.checked ? 'Mock mode enabled — using built-in presets' : ((hasShopApiKey() || geminiReady) ? 'Live mode enabled (Gemini & Veo 3)' : 'Live mode enabled — please configure API key in .env'));
 });
 
 $('#studioMockToggle')?.addEventListener('change', event => {
   setMockMode(event.target.checked);
-  toast(event.target.checked ? 'Mock mode enabled' : ((hasShopApiKey() || geminiReady) ? 'Live mode enabled' : 'Please enter ShopAIKey on home page or set in .env'));
+  toast(event.target.checked ? 'Mock mode enabled' : ((hasShopApiKey() || geminiReady) ? 'Live mode enabled (Gemini & Veo 3)' : 'Please set API key in .env'));
 });
 
 $('#saveApiKeyBtn')?.addEventListener('click', () => {
   const val = ($('#shopApiKeyInput')?.value || '').trim();
   setShopApiKey(val);
-  toast(val ? 'ShopAIKey saved!' : 'ShopAIKey cleared');
+  toast(val ? 'API key saved!' : 'API key cleared');
 });
 
 $('#shopApiKeyInput')?.addEventListener('keydown', event => {
   if (event.key === 'Enter') {
     const val = (event.target.value || '').trim();
     setShopApiKey(val);
-    toast(val ? 'ShopAIKey saved!' : 'ShopAIKey cleared');
+    toast(val ? 'API key saved!' : 'API key cleared');
   }
 });
 
@@ -1767,6 +1773,7 @@ fetch('/api/health').then(response => response.json()).then(health => {
   serverShopAi = !!health.shopaiConfigured;
   serverModels = health.models || null;
   serverProvider = health.provider || null;
+  serverShowApiKeyInput = !!health.showApiKeyInput;
   syncApiConfigUI();
   renderCanvas();
 }).catch(() => {
